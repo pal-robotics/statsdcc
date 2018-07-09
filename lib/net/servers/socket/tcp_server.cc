@@ -19,7 +19,7 @@ TCPServer::TCPServer(int port, std::shared_ptr<statsdcc::consumers::Consumer> co
   this->sockfd = statsdcc::net::wrapper::socket(AF_INET, SOCK_STREAM, 0);
   if (this->sockfd == -1) throw std::string("Failed to create socket");
 
-  sockaddr_in server_addr = {0};
+  sockaddr_in server_addr = {};
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(port);
   server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
