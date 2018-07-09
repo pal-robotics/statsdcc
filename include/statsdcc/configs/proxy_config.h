@@ -2,7 +2,7 @@
 #ifndef INCLUDE_STATSDCC_CONFIGS_PROXY_CONFIG_H_
 #define INCLUDE_STATSDCC_CONFIGS_PROXY_CONFIG_H_
 
-#include <json/json.h>
+#include <jsoncpp/json/json.h>
 #include <boost/regex.hpp>
 
 #include <memory>
