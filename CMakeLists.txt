@@ -2,6 +2,10 @@ cmake_minimum_required (VERSION 2.8.12)
 
 project (statsdcc CXX)
 
+find_package(catkin REQUIRED)
+
+catkin_package()
+
 include(CheckIncludeFileCXX)
 include (CheckCXXCompilerFlag)
 
@@ -21,7 +25,7 @@ endif()
 
 
 configure_file (include/statsdcc/version.h.in
-                include/statsdcc/version.h)
+                ${CATKIN_DEVEL_PREFIX}/include/statsdcc/version.h)
 
 # set compiler flags
 check_cxx_compiler_flag ('-std=c++11' COMPILER_SUPPORTS_CXX11)
@@ -52,6 +56,7 @@ endif()
 
 include_directories (
    include
+   ${CATKIN_DEVEL_PREFIX}/include
    build/include
    vendor/gtest-1.7.0/include
 )

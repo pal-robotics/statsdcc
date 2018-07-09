@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>statsdcc</name>
+  <version>0.0.0</version>
+  <description>High performance multi-threaded network daemon written in C++
+  that aggregates stats and sends aggregates to backends</description>
+
+  <maintainer email="jordan.palacios@pal-robotics.com">Jordan Palacios</maintainer>
+
+  <license>MIT</license>
+
+  <author email="jordan.palacios@pal-robotics.com">Jordan Palacios</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>boost</build_depend>
+  <build_depend>libgoogle-perftools-dev</build_depend>
+  <build_depend>libjsoncpp-dev</build_depend>
+  <build_depend>libmicrohttpd-dev</build_depend>
+  <build_depend>libssl-dev</build_depend>
+
+  <exec_depend>boost</exec_depend>
+
+</package>

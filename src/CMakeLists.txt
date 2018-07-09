@@ -51,3 +51,17 @@ target_link_libraries (proxy
   ${MICROHTTPD}
   pthread
 )
+
+
+#############
+## Install ##
+#############
+
+install(
+    TARGETS
+        config backend_config proxy_config aggregator_worker
+        proxy_worker ledger statsdcc proxy
+    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
