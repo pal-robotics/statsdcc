@@ -2,7 +2,11 @@ cmake_minimum_required (VERSION 2.8.12)
 
 project (statsdcc CXX)
 
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED
+    COMPONENTS
+        pal_statistics_msgs
+        roscpp
+)
 
 catkin_package()
 
@@ -60,6 +64,7 @@ include_directories (
    build/include
    # vendor/gtest-1.7.0/include
 )
+include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
 
 # check if atomic.h exists
 check_include_file_cxx (atomic HAVE_ATOMIC)

@@ -7,11 +7,12 @@
 #include "statsdcc/net/servers/socket/server.h"
 #include "statsdcc/net/servers/socket/tcp_server.h"
 #include "statsdcc/net/servers/socket/udp_server.h"
+#include "statsdcc/net/servers/socket/ros_server.h"
 
 namespace statsdcc {
 
 /**
- * Creates UDP and/or TCP servers
+ * Creates UDP, TCP and/or ROS servers
  */
 class ServerFactory {
  public:
@@ -60,6 +61,23 @@ class ServerFactory {
     return std::unique_ptr<statsdcc::net::servers::socket::Server>(
              new statsdcc::net::servers::socket::UDPServer(
                port, num_threads, recv_buffer, consumer));
+  }
+
+  /**
+   * Creates and returns a ROS server object
+   *
+   * @param node_name the name of the ROS server node
+   * @param consumer a refernce to Consumer object that has implementation for
+   *                 consume(std::string& metric) method
+   *
+   * @return a pointer to ROS server object
+   */
+  static inline std::unique_ptr<statsdcc::net::servers::socket::Server>
+    get_ros_server(
+    std::string node_name,
+    std::shared_ptr<statsdcc::consumers::Consumer> consumer) {
+    return std::unique_ptr<statsdcc::net::servers::socket::Server>(
+             new statsdcc::net::servers::socket::ROSServer(node_name, consumer));
   }
 };
 
