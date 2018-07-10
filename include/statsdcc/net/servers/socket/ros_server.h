@@ -5,6 +5,10 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <map>
+#include <utility>
+
+#include <boost/ptr_container/ptr_vector.hpp>
 
 #include <ros/node_handle.h>
 #include <ros/subscriber.h>
@@ -17,6 +21,11 @@
 namespace statsdcc { namespace net { namespace servers { namespace socket {
 
 class ROSServer : public Server {
+ public:
+  typedef std::vector<std::string> MetricTypes;
+  typedef std::pair<std::string, MetricTypes> Rule;
+  typedef std::vector<Rule> Rules;
+
  public:
   /**
    * A constructor
@@ -40,15 +49,17 @@ class ROSServer : public Server {
   void start();
 
  private:
-  void listen();
+  void createStatsSubs();
 
-  void statisticsCallback(const pal_statistics_msgs::Statistics &statistics);
+  void statisticsCallback(const pal_statistics_msgs::Statistics::ConstPtr& statistics,
+                          int rules_index);
 
- private:
+private:
   std::string node_name;
 
   ros::NodeHandle node_handle;
-  ros::Subscriber sub;
+  std::vector<ros::Subscriber> subs;
+  std::vector<Rules> topics_rules;
 };
 
 }  // namespace socket
