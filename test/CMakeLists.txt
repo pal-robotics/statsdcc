@@ -1,5 +1,5 @@
-if (test)
-  add_executable(ledger_test ledger_test.cc)
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(ledger_test ledger_test.cc)
   target_link_libraries(ledger_test
     ledger
     backend_config

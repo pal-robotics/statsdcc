@@ -2,7 +2,7 @@
 #ifndef INCLUDE_STATSDCC_CONFIGS_CONFIG_H_
 #define INCLUDE_STATSDCC_CONFIGS_CONFIG_H_
 
-#include <json/json.h>
+#include <jsoncpp/json/json.h>
 
 #include "statsdcc/logger.h"
 

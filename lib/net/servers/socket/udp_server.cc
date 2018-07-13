@@ -45,7 +45,7 @@ void UDPServer::listen() {
     return;
   }
 
-  sockaddr_in server_addr = {0};
+  sockaddr_in server_addr = {};
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(this->port);
   server_addr.sin_addr.s_addr = htonl(INADDR_ANY);

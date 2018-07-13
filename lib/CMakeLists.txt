@@ -18,3 +18,18 @@ add_library (hashring hashring/hashring.cc)
 add_library (logger logger.cc)
 
 add_library (status status.cc)
+
+
+#############
+## Install ##
+#############
+
+install(
+    TARGETS
+        net tcp_server udp_server aggregator_http_server proxy_http_server
+        carbon stdout repeater aggregator_consumer hashring logger status
+    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
