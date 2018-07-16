@@ -26,6 +26,8 @@ class ROSServer : public Server {
   typedef std::pair<std::string, MetricTypes> Rule;
   typedef std::vector<Rule> Rules;
 
+  typedef std::map<std::string, MetricTypes> StatMap;
+
  public:
   /**
    * A constructor
@@ -60,6 +62,7 @@ private:
   ros::NodeHandle node_handle;
   std::vector<ros::Subscriber> subs;
   std::vector<Rules> topics_rules;
+  StatMap stat_map;
 };
 
 }  // namespace socket

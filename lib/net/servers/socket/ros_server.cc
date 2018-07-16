@@ -72,8 +72,8 @@ ROSServer::Rules to_rules(const XmlRpc::XmlRpcValue &stats)
 }
 
 ROSServer::ROSServer(std::string node_name, std::shared_ptr<statsdcc::consumers::Consumer> consumer)
-  : Server(1, consumer), node_name(node_name), node_handle("~"), topics_rules() {
-
+  : Server(1, consumer), node_name(node_name), node_handle("~"), topics_rules(), stat_map()
+{
   createStatsSubs();
 }
 
@@ -130,20 +130,35 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
   /// in a boost::lockfree::queue. Maybe we can send the metrics in parallel? See OpenMP
   for (auto stat = statistics->statistics.begin(); stat != statistics->statistics.end(); ++stat)
   {
-    /// @todo build a map with map[stat_name] = metric_types to save time?
-
-    for (auto rule = rules.begin(); rule != rules.end(); ++rule)
+    /// @note using map to cache results of regex matches
+    auto entry = stat_map.find(stat->name);
+    if (entry != stat_map.end())
     {
-      if (std::regex_match(stat->name, result, std::regex(rule->first)))
+      for (auto metric_type = entry->second.begin(); metric_type != entry->second.end(); ++metric_type)
       {
-        for (auto metric_type = rule->second.begin(); metric_type != rule->second.end(); ++metric_type)
+        const std::string metric =
+            stat->name + ":" + std::to_string(stat->value) + "|" + *metric_type;
+        this->consumer->consume(metric);
+      }
+    }
+    else
+    {
+      for (auto rule = rules.begin(); rule != rules.end(); ++rule)
+      {
+        if (std::regex_match(stat->name, result, std::regex(rule->first)))
         {
-          const std::string metric =
-              stat->name + ":" + std::to_string(stat->value) + "|" + *metric_type;
-          this->consumer->consume(metric);
+          for (auto metric_type = rule->second.begin(); metric_type != rule->second.end();
+               ++metric_type)
+          {
+            stat_map[stat->name].push_back(*metric_type);
+
+            const std::string metric =
+                stat->name + ":" + std::to_string(stat->value) + "|" + *metric_type;
+            this->consumer->consume(metric);
+          }
+          // skip rest of rules after a valid match
+          continue;
         }
-        // skip rest of rules after a valid match
-        continue;
       }
     }
   }
