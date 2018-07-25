@@ -23,7 +23,7 @@ class Config {
 
   virtual Json::Value to_json();
 
-  // tcp, udp, http servers and ports to listen on
+  // tcp, udp, ros, http servers and ports to listen on
   struct {
     struct {
       int port;
@@ -35,6 +35,10 @@ class Config {
       bool enabled;
       int recv_buffer;
     } udp;
+    struct {
+      std::string node_name;
+      bool enabled;
+    } ros;
     struct {
       int port;
       bool enabled;

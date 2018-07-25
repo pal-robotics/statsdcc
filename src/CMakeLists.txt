@@ -12,6 +12,7 @@ add_executable (statsdcc aggregator.cc)
 target_link_libraries (statsdcc
   tcp_server
   udp_server
+  ros_server
   aggregator_http_server
   status
   aggregator_consumer
@@ -30,6 +31,7 @@ target_link_libraries (statsdcc
   ${BOOST_REGEX}
   ${TCMALLOC_MINIMAL}
   ${MICROHTTPD}
+  ${catkin_LIBRARIES}
   pthread
 )
 
@@ -38,6 +40,7 @@ target_link_libraries (proxy
   proxy_http_server
   tcp_server
   udp_server
+  ros_server
   status
   net
   proxy_worker

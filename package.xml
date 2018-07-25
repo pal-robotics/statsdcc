@@ -18,7 +18,10 @@
   <build_depend>libjsoncpp-dev</build_depend>
   <build_depend>libmicrohttpd-dev</build_depend>
   <build_depend>libssl-dev</build_depend>
+  <build_depend>pal_statistics_msgs</build_depend>
+  <build_depend>roscpp</build_depend>
 
   <exec_depend>boost</exec_depend>
+  <exec_depend>roscpp</exec_depend>
 
 </package>

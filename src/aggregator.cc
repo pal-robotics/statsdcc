@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <cstdio>
 
+#include <ros/init.h>
+
 #include "statsdcc/backend_container.h"
 #include "statsdcc/server_factory.h"
 #include "statsdcc/workers/aggregator/worker.h"
@@ -26,7 +28,9 @@ int main(int argc, char **argv) {
   ::logger = Logger::get_logger();
   configure(argv[optind]);
 
-  if (!(::config->servers.tcp.enabled || ::config->servers.udp.enabled)) {
+  if (!(::config->servers.tcp.enabled || ::config->servers.udp.enabled ||
+        ::config->servers.ros.enabled))
+  {
     ::logger->error("Please configure a least one server");
     exit(1);
   }
@@ -59,6 +63,13 @@ int main(int argc, char **argv) {
   ::logger->info("Starting server...");
   ::consumer = std::make_shared<consumers::AggregatorConsumer>();
 
+  // ros init
+  if (::config->servers.ros.enabled)
+  {
+    ::logger->info("ros::init()");
+    ros::init(argc, argv, ::config->servers.ros.node_name);
+  }
+
   try {
     // start udp servers
     if (::config->servers.udp.enabled) {
@@ -78,6 +89,14 @@ int main(int argc, char **argv) {
             ::consumer));
     }
 
+    // start ros servers
+    if (::config->servers.ros.enabled) {
+        ::servers.push_back(
+          ServerFactory::get_ros_server(
+            ::config->servers.ros.node_name,
+            ::consumer));
+    }
+
     // start http server
     if (::config->servers.http.enabled) {
       http_server = std::unique_ptr<net::servers::http::aggregator::HttpServer>(
@@ -91,6 +110,14 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  os::pause();
+  if (!::config->servers.ros.enabled)
+  {
+    os::pause();
+  }
+  else
+  {
+    ros::spin();
+    stop();
+  }
   return 0;
 }

@@ -13,6 +13,9 @@ Config::Config(const Json::Value& json) {
     json["servers"]["udp"].get("recv_buffer", 8388608).asInt();
   this->servers.udp.enabled = this->servers.udp.port != -1;
 
+  this->servers.ros.node_name  = json["servers"]["ros"].get("node_name", "").asString();
+  this->servers.ros.enabled = this->servers.ros.node_name != "";
+
   this->servers.http.port  = json["servers"]["http"].get("port", 8080).asInt();
   this->servers.http.enabled =
     json["servers"]["http"].get("enabled", true).asBool();
