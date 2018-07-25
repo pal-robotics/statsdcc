@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.1 (2018-07-25)
+------------------
 * Merge branch 'ros_server' into 'erbium-devel'
   Add ros server
   See merge request qa/statsdcc!2
