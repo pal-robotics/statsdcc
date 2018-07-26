@@ -18,9 +18,7 @@ AggregatorConfig::AggregatorConfig(const Json::Value& json)
   this->frequency = json.get("frequency", 10).asInt();
 
   Json::Value ps = json["percentiles"];
-  if (ps.size() == 0) {
-    this->percentiles.push_back(90);
-  } else {
+  if (ps.size() > 0) {
     for (auto itr = ps.begin(); itr != ps.end(); ++itr) {
       this->percentiles.push_back(itr->asInt());
     }
