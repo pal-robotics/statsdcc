@@ -11,6 +11,7 @@ AggregatorConfig::AggregatorConfig(const Json::Value& json)
   : Config(json) {
   this->name = json.get("name", "statsdcc").asString();
   this->prefix = json.get("prefix", "").asString();
+  this->use_metric_type_prefix = json.get("use_metric_type_prefix", true).asBool();
   if(!this->prefix.empty()) {
     this->prefix = this->prefix + ".";
   }

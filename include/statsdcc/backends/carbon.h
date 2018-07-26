@@ -62,6 +62,9 @@ class Carbon: public statsdcc::backends::Backend {
 
   // prefix for all satts
   std::string prefix;
+
+  // use metric type prefix
+  bool use_metric_type_prefix;
 };
 
 }  // namespace backends

@@ -33,6 +33,8 @@ class AggregatorConfig : public Config {
 
   std::string prefix;
 
+  bool use_metric_type_prefix; // default: true
+
   int frequency;       // default: 10
 
   std::vector<int> percentiles;  // default: [90]
