@@ -11,6 +11,8 @@ AggregatorConfig::AggregatorConfig(const Json::Value& json)
   : Config(json) {
   this->name = json.get("name", "statsdcc").asString();
   this->prefix = json.get("prefix", "").asString();
+  this->use_metric_type_prefix = json.get("use_metric_type_prefix", true).asBool();
+  this->add_fqdn_prefix = json.get("add_fqdn_prefix", false).asBool();
   if(!this->prefix.empty()) {
     this->prefix = this->prefix + ".";
   }
@@ -18,9 +20,7 @@ AggregatorConfig::AggregatorConfig(const Json::Value& json)
   this->frequency = json.get("frequency", 10).asInt();
 
   Json::Value ps = json["percentiles"];
-  if (ps.size() == 0) {
-    this->percentiles.push_back(90);
-  } else {
+  if (ps.size() > 0) {
     for (auto itr = ps.begin(); itr != ps.end(); ++itr) {
       this->percentiles.push_back(itr->asInt());
     }
