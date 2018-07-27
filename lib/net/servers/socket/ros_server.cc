@@ -147,6 +147,12 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
       {
         if (std::regex_match(stat->name, result, std::regex(rule->first)))
         {
+          stat_map[stat->name] = MetricTypes();
+          if(rule->second.empty())
+          {
+            ::logger->warn(stat->name + " has no metric types defined. Stats won't be logged");
+          }
+
           for (auto metric_type = rule->second.begin(); metric_type != rule->second.end();
                ++metric_type)
           {
@@ -159,6 +165,13 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
           // skip rest of rules after a valid match
           continue;
         }
+      }
+
+      // if no valid rule was found, guarantee we are not looking for a valid regex each time
+      if(stat_map.find(stat->name) == stat_map.end())
+      {
+        stat_map[stat->name] = MetricTypes();
+        ::logger->warn(stat->name + " is not matched by any rule. Stat won't be logged");
       }
     }
   }
