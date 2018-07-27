@@ -52,11 +52,11 @@ add_compile_options (-Wall -Wextra)
 add_definitions (-D_GLIBCXX_USE_NANOSLEEP)
 add_definitions (-D_GLIBCXX_USE_SCHED_YIELD)
 
-if (debug)
-  add_compile_options(-g)
-else(debug)
-  add_compile_options(-O3)
-endif()
+#if (debug)
+#  add_compile_options(-g)
+#else(debug)
+#  add_compile_options(-O3)
+#endif()
 
 include_directories (
    include
