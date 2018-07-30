@@ -138,7 +138,7 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
       {
         const std::string metric =
             stat->name + ":" + std::to_string(stat->value) + "|" + *metric_type;
-        this->consumer->consume(metric);
+        this->consumer->consume(metric, stat->name);
       }
     }
     else

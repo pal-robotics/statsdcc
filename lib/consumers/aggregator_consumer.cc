@@ -28,17 +28,7 @@ void AggregatorConsumer::consume(const std::string& metric) const {
 
   std::size_t pos = metric.find_first_of(":");
   if (std::string::npos != pos) {
-    auto idx = str_hash(metric.substr(0, pos)) % ::config->workers;
-    // explicit tc_malloc is faster than strdup
-    //  - possibly because length() is O(1)
-    char* metric_ptr = (char*) tc_malloc(metric.length() + 1);
-    if (metric_ptr == NULL) {
-      ::logger->warn("unable to tc_malloc");
-      return;
-    }
-
-    std::strcpy(metric_ptr, metric.c_str());
-    ::workers[idx]->submit(metric_ptr);
+    consume(metric, metric.substr(0, pos));
   } else {
     char* metric_ptr = (char*) tc_malloc(this->bad_keys_metric.length() + 1);
     if (metric_ptr == NULL) {
@@ -50,6 +40,22 @@ void AggregatorConsumer::consume(const std::string& metric) const {
     ::workers[this->bad_keys_queue_hash]->submit(metric_ptr);
   }
 
+}
+
+void AggregatorConsumer::consume(const std::string &metric,
+                                 const std::string &metric_name) const {
+
+  auto idx = str_hash(metric_name) % ::config->workers;
+  // explicit tc_malloc is faster than strdup
+  //  - possibly because length() is O(1)
+  char* metric_ptr = (char*) tc_malloc(metric.length() + 1);
+  if (metric_ptr == NULL) {
+    ::logger->warn("unable to tc_malloc");
+    return;
+  }
+
+  std::strcpy(metric_ptr, metric.c_str());
+  ::workers[idx]->submit(metric_ptr);
 }
 
 }  // namespace consumers

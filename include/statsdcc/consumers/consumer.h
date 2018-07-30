@@ -28,6 +28,8 @@ class Consumer {
    * @param metric metric to be processed
    */
   virtual void consume(const std::string& metric) const = 0;
+
+  virtual void consume(const std::string& metric, const std::string& metric_name) const = 0;
 };
 
 }  // namespace consumers
