@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.2 (2018-07-31)
+------------------
 * Merge branch 'improve_performance' into 'erbium-devel'
   Improve performance
   See merge request qa/statsdcc!4
