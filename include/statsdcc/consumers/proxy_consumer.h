@@ -39,6 +39,10 @@ class ProxyConsumer : public Consumer {
     this->worker.submit(metric_ptr);
   }
 
+  void consume(const std::string& metric, const std::string& /*metric_name*/) const {
+    consume(metric);
+  }
+
  private:
   // refernce to worker
   statsdcc::workers::proxy::Worker& worker;

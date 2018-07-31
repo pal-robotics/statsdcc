@@ -30,6 +30,7 @@ class AggregatorConsumer : public Consumer {
    * @param metric metric to be processed
    */
   void consume(const std::string& metric) const;
+  void consume(const std::string& metric, const std::string& metric_name) const;
 
  private:
   std::hash<std::string> str_hash;
