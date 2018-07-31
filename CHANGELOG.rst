@@ -2,6 +2,22 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'improve_performance' into 'erbium-devel'
+  Improve performance
+  See merge request qa/statsdcc!4
+* New consume() function to avoid a find_first_of call for each metric
+* Merge branch 'more_options' into 'erbium-devel'
+  Add more configuration options
+  See merge request qa/statsdcc!3
+* Stats with no regex won't be looked up in each callback
+* Disabled custom compile options: -g -03
+* Add FQDN prefix option. Disabled by default
+* Metric type prefix is now optional. Enabled by default
+* Now allows aggregator configurations with no percentiles
+* Contributors: Jordan Palacios
+
 0.0.1 (2018-07-25)
 ------------------
 * Merge branch 'ros_server' into 'erbium-devel'
