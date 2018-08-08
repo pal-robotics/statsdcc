@@ -2,6 +2,15 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'carbon_backend_stats' into 'erbium-devel'
+  Cleanup carbon backend stats
+  See merge request qa/statsdcc!5
+* Add FQDN prefix to carbon backend stats
+* Fixed names of some statistics
+* Contributors: Jordan Palacios
+
 0.0.2 (2018-07-31)
 ------------------
 * Merge branch 'improve_performance' into 'erbium-devel'
