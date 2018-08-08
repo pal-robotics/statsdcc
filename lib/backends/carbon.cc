@@ -186,13 +186,13 @@ void Carbon::flush_stats(const Ledger& ledger, int flusher_id) {
     std::to_string(
       static_cast<long long unsigned int>(chrono::unixtime_ms() - start_time));
 
-  std::string key = this->prefix_stats + ".numStats";
+  std::string key = this->prefix_stats + ".num_stats";
   stat_strings[this->hashring->get(key)] +=
     key + " "
         + num_stats_str
         + ts_suffix;
 
-  key = this->prefix_stats + ".carbonStats.calculationtime";
+  key = this->prefix_stats + ".carbon_stats.calculation_time";
   stat_strings[this->hashring->get(key)] +=
     key + " "
         + total_time
