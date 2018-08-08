@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.3 (2018-08-08)
+------------------
 * Merge branch 'carbon_backend_stats' into 'erbium-devel'
   Cleanup carbon backend stats
   See merge request qa/statsdcc!5
