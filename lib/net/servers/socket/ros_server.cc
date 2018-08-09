@@ -107,8 +107,10 @@ void ROSServer::createStatsSubs()
 
         ::logger->info("Creating subscriber for " + topic_name);
 
+        // skip '/' character from the topic name
         subs.push_back(node_handle.subscribe<pal_statistics_msgs::Statistics>(
-            topic_name, 1000, boost::bind(&ROSServer::statisticsCallback, this, _1, i)));
+            topic_name, 1000,
+            boost::bind(&ROSServer::statisticsCallback, this, _1, topic_name.substr(1), i)));
       }
       else
       {
@@ -119,7 +121,7 @@ void ROSServer::createStatsSubs()
 }
 
 void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstPtr &statistics,
-                                   int rules_index)
+                                   const std::string &topic_name, int rules_index)
 {
   ros::Time before = ros::Time::now();
 
@@ -177,7 +179,10 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
   }
 
   ros::Time after = ros::Time::now();
-  // ::logger->info("callback took: " + std::to_string((after - before).toSec()));
+
+  const std::string stat_name = "statsdcc." + topic_name + ".callback_processing_time";
+  const std::string metric = stat_name + ":" + std::to_string((after - before).toSec()) + "|ms";
+  this->consumer->consume(metric, stat_name);
 }
 
 }  // namespace socket

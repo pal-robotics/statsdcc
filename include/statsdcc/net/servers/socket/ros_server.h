@@ -54,7 +54,7 @@ class ROSServer : public Server {
   void createStatsSubs();
 
   void statisticsCallback(const pal_statistics_msgs::Statistics::ConstPtr& statistics,
-                          int rules_index);
+                          const std::string& topic_name, int rules_index);
 
 private:
   std::string node_name;
