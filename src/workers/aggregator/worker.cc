@@ -50,6 +50,8 @@ void Worker::process() {
       continue;
     }
 
+    const std::uint64_t start_time = chrono::unixtime_ns();
+
     metric = std::string(metric_ptr);
     tc_free(metric_ptr);
 
@@ -79,7 +81,10 @@ void Worker::process() {
 
     this->current_ledger->buffer(metric);
     ++count;
-  }
+
+    // record total time it takes to process one metric
+    this->current_ledger->setProcTime(chrono::unixtime_ns() - start_time);
+  }  
 
   ::logger->info("Worker stopped...");
 }

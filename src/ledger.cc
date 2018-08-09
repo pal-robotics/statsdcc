@@ -212,4 +212,10 @@ void Ledger::process() {
     chrono::unixtime_ms() - start_time;
 }
 
+void Ledger::setProcTime(std::int64_t value)
+{
+  this->statsd_metrics["metrics_processing_time"] =
+      this->statsd_metrics["metrics_processing_time"] + value;
+}
+
 }  // namespace statsdcc

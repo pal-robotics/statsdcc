@@ -117,6 +117,8 @@ class Ledger {
       : 0;
   }
 
+  void setProcTime(std::int64_t value);
+
   std::unordered_map<std::string, long long int> frequency;
 
  private:
