@@ -46,7 +46,7 @@ void Worker::process() {
   while (!this->done) {
     if (!this->work_queue.pop(metric_ptr)) {
       // sleeping and polling is better performant than conditional variables
-      std::this_thread::sleep_for(std::chrono::nanoseconds(10));
+      std::this_thread::sleep_for(std::chrono::nanoseconds(100));
       continue;
     }
 
@@ -84,7 +84,7 @@ void Worker::process() {
 
     // record total time it takes to process one metric
     this->current_ledger->setProcTime(chrono::unixtime_ns() - start_time);
-  }  
+  }
 
   ::logger->info("Worker stopped...");
 }

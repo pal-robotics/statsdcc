@@ -68,7 +68,7 @@ void Worker::process() {
   while (!this->done) {
     if (!this->work_queue.pop(metric_ptr)) {
       // sleeping and polling is better performant than conditional variables
-      std::this_thread::sleep_for(std::chrono::nanoseconds(10));
+      std::this_thread::sleep_for(std::chrono::nanoseconds(100));
       continue;
     }
     metric = std::string(metric_ptr);
