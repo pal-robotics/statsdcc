@@ -94,7 +94,8 @@ int main(int argc, char **argv) {
         ::servers.push_back(
           ServerFactory::get_ros_server(
             ::config->servers.ros.node_name,
-            ::consumer));
+            ::consumer,
+            ::backend_container));
     }
 
     // start http server

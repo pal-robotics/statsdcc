@@ -121,6 +121,71 @@ void Ledger::buffer(const std::string& metric) {
   }
 }
 
+void Ledger::buffer(const std::string &metric_name, double metric_value,
+                    const std::string &metric_type)
+{
+  MetricType type = MetricType::counter;
+  double sample_rate = 1;
+
+  // record number of calls to buffer method
+  ++this->statsd_metrics["metrics_processed"];
+
+  // setup the names for the stats stored in counters
+  std::string bad_lines_seen = ::config->name + ".bad_lines_seen";
+
+  // track bad lines
+  bool bad_line = false;
+  if (metric_type == "ms")
+  {
+    type = MetricType::timer;
+  }
+  else if (metric_type == "c")
+  {
+    type = MetricType::counter;
+  }
+  else if (metric_type == "g")
+  {
+    type = MetricType::gauge;
+  }
+  else if (metric_type == "s")
+  {
+    type = MetricType::set;
+  }
+  else
+  {
+    bad_line = true;
+  }
+
+  if (bad_line) {
+    ::logger->info("Bad line: " + metric_name + "|" + metric_type);
+    ++this->counters[bad_lines_seen];
+    return;
+  }
+
+  ++this->frequency[metric_name];
+
+  switch (type) {
+    case MetricType::timer:
+      this->timer_counters[metric_name] += (1 / sample_rate);
+      this->timers[metric_name].push_back(metric_value);
+      break;
+
+    case MetricType::gauge:
+      {
+        /// @todo +/- is specified
+        this->gauges[metric_name] = metric_value;
+        break;
+      }
+    case MetricType::set:
+      /// @todo sets
+      break;
+
+    default:
+      this->counters[metric_name] += metric_value * (1 / sample_rate);
+      break;
+  }
+}
+
 // Aggregates buffered metrics
 void Ledger::process() {
   std::uint64_t start_time = chrono::unixtime_ms();

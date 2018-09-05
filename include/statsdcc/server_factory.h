@@ -69,15 +69,17 @@ class ServerFactory {
    * @param node_name the name of the ROS server node
    * @param consumer a refernce to Consumer object that has implementation for
    *                 consume(std::string& metric) method
+   * @param backend_container a reference to the backend container
    *
    * @return a pointer to ROS server object
    */
   static inline std::unique_ptr<statsdcc::net::servers::socket::Server>
     get_ros_server(
     std::string node_name,
-    std::shared_ptr<statsdcc::consumers::Consumer> consumer) {
+    std::shared_ptr<statsdcc::consumers::Consumer> consumer,
+    const std::shared_ptr<BackendContainer>& backend_container) {
     return std::unique_ptr<statsdcc::net::servers::socket::Server>(
-             new statsdcc::net::servers::socket::ROSServer(node_name, consumer));
+             new statsdcc::net::servers::socket::ROSServer(node_name, consumer, backend_container));
   }
 };
 

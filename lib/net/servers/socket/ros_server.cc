@@ -13,6 +13,8 @@
 
 #include <ros/assert.h>
 
+#include "statsdcc/backend_container.h"
+#include "statsdcc/ledger.h"
 #include "statsdcc/logger.h"
 #include "statsdcc/net/wrapper.h"
 #include "statsdcc/os.h"
@@ -71,10 +73,27 @@ ROSServer::Rules to_rules(const XmlRpc::XmlRpcValue &stats)
 }
 }
 
-ROSServer::ROSServer(std::string node_name, std::shared_ptr<statsdcc::consumers::Consumer> consumer)
-  : Server(1, consumer), node_name(node_name), node_handle("~"), topics_rules(), stat_map()
+ROSServer::ROSServer(std::string node_name, std::shared_ptr<consumers::Consumer> consumer,
+                     const std::shared_ptr<BackendContainer> &backend_container)
+  : Server(1, consumer)
+  , node_name(node_name)
+  , backend_container(backend_container)
+  , node_handle("~")
+  , topics_rules()
+  , stat_map()
+  , ledger(new Ledger())
+  , flush_ledger(false)
+  , ledger_timer()
+  , flusher_guard()
 {
   createStatsSubs();
+
+  auto ledge_flusher = [&](const ros::TimerEvent &/*event*/)
+  {
+    flush_ledger = true;
+  };
+
+  ledger_timer = node_handle.createTimer(ros::Duration(::config->frequency), ledge_flusher);
 }
 
 void ROSServer::createStatsSubs()
@@ -128,8 +147,6 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
   const Rules rules = topics_rules[rules_index];
   std::smatch result;
 
-  /// @todo consumer->consume(metric) call seems thread safe, i.e., data ends up
-  /// in a boost::lockfree::queue. Maybe we can send the metrics in parallel? See OpenMP
   for (auto stat = statistics->statistics.begin(); stat != statistics->statistics.end(); ++stat)
   {
     /// @note using map to cache results of regex matches
@@ -138,9 +155,7 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
     {
       for (auto metric_type = entry->second.begin(); metric_type != entry->second.end(); ++metric_type)
       {
-        const std::string metric =
-            stat->name + ":" + std::to_string(stat->value) + "|" + *metric_type;
-        this->consumer->consume(metric, stat->name);
+        ledger->buffer(stat->name, stat->value, *metric_type);
       }
     }
     else
@@ -160,9 +175,7 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
           {
             stat_map[stat->name].push_back(*metric_type);
 
-            const std::string metric =
-                stat->name + ":" + std::to_string(stat->value) + "|" + *metric_type;
-            this->consumer->consume(metric);
+            ledger->buffer(stat->name, stat->value, *metric_type);
           }
           // skip rest of rules after a valid match
           continue;
@@ -178,11 +191,26 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
     }
   }
 
+  if (flush_ledger)
+  {
+    // process and ledger
+    ledger->process();
+
+    // flush ledger in separate thread
+    flusher_guard.reset(new ThreadGuard(
+        std::thread(&BackendContainer::flush, backend_container, Ledger(*this->ledger), 0)));
+
+    // delete previous ledger and create new one
+    ledger.reset(new Ledger());
+
+    flush_ledger = false;
+  }
+
   ros::Time after = ros::Time::now();
 
   const std::string stat_name = "statsdcc." + topic_name + ".callback_processing_time";
-  const std::string metric = stat_name + ":" + std::to_string((after - before).toSec()) + "|ms";
-  this->consumer->consume(metric, stat_name);
+  const double stat_value = (after - before).toSec();
+  ledger->buffer(stat_name, stat_value, "ms");
 }
 
 }  // namespace socket

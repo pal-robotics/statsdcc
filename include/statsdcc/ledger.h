@@ -104,6 +104,7 @@ class Ledger {
    * @param metric The metric value to be buffered for processing later
    */
   void buffer(const std::string& metric);
+  void buffer(const std::string& metric_name, double metric_value, const std::string& metric_type);
 
   /**
    * Aggregates the metric values buffered by buffer method.
