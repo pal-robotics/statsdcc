@@ -193,12 +193,9 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
 
   if (flush_ledger)
   {
-    // process and ledger
-    ledger->process();
-
-    // flush ledger in separate thread
-    flusher_guard.reset(new ThreadGuard(
-        std::thread(&BackendContainer::flush, backend_container, Ledger(*this->ledger), 0)));
+    // process and flush ledger in separate thread
+    flusher_guard.reset(new ThreadGuard(std::thread(
+        &BackendContainer::processAndFlush, backend_container, Ledger(*this->ledger), 0)));
 
     // delete previous ledger and create new one
     ledger.reset(new Ledger());
