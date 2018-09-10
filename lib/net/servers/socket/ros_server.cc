@@ -182,7 +182,7 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
             ledger->buffer(stat->name, stat->value, *metric_type);
           }
           // skip rest of rules after a valid match
-          continue;
+          break;
         }
       }
 
