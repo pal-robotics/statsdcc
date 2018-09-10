@@ -13,13 +13,23 @@
 namespace statsdcc { namespace chrono {
 
 /**
- * Returns currect time since epoch in milliseconds.
+ * Returns current time since epoch in milliseconds.
  *
  * @return epoch time in milliseconds
  */
 inline uint64_t unixtime_ms() {
   return (std::chrono::system_clock::now().time_since_epoch()
            / std::chrono::milliseconds(1));
+}
+
+/**
+ * Returns current time since epoch in nanoseconds.
+ *
+ * @return epoch time in nanoseconds
+ */
+inline uint64_t unixtime_ns() {
+  return (std::chrono::system_clock::now().time_since_epoch()
+           / std::chrono::nanoseconds(1));
 }
 
 /**

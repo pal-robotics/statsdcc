@@ -12,13 +12,20 @@
 
 #include <ros/node_handle.h>
 #include <ros/subscriber.h>
+#include <ros/timer.h>
 
 #include <pal_statistics_msgs/Statistics.h>
 
 #include "statsdcc/net/servers/socket/server.h"
 #include "statsdcc/net/wrapper.h"
 
-namespace statsdcc { namespace net { namespace servers { namespace socket {
+namespace statsdcc {
+
+// forward declarations
+class BackendContainer;
+class Ledger;
+
+namespace net { namespace servers { namespace socket {
 
 class ROSServer : public Server {
  public:
@@ -35,7 +42,8 @@ class ROSServer : public Server {
    * @param consumer a refernce to Consumer object that has implementation for
    *                 consume(std::string& metric) method
    */
-  ROSServer(std::string node_name, std::shared_ptr<statsdcc::consumers::Consumer> consumer);
+  ROSServer(std::string node_name, std::shared_ptr<statsdcc::consumers::Consumer> consumer,
+            const std::shared_ptr<BackendContainer>& backend_container);
 
   ROSServer(const ROSServer&) = delete;
   ROSServer& operator=(const ROSServer&) = delete;
@@ -54,15 +62,22 @@ class ROSServer : public Server {
   void createStatsSubs();
 
   void statisticsCallback(const pal_statistics_msgs::Statistics::ConstPtr& statistics,
-                          int rules_index);
+                          const std::string& topic_name, int rules_index);
 
 private:
   std::string node_name;
+
+  std::shared_ptr<BackendContainer> backend_container;
 
   ros::NodeHandle node_handle;
   std::vector<ros::Subscriber> subs;
   std::vector<Rules> topics_rules;
   StatMap stat_map;
+
+  std::unique_ptr<Ledger> ledger;
+  bool flush_ledger;
+  ros::Timer ledger_timer;
+  std::unique_ptr<ThreadGuard> flusher_guard;
 };
 
 }  // namespace socket

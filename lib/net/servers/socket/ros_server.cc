@@ -13,6 +13,8 @@
 
 #include <ros/assert.h>
 
+#include "statsdcc/backend_container.h"
+#include "statsdcc/ledger.h"
 #include "statsdcc/logger.h"
 #include "statsdcc/net/wrapper.h"
 #include "statsdcc/os.h"
@@ -71,10 +73,27 @@ ROSServer::Rules to_rules(const XmlRpc::XmlRpcValue &stats)
 }
 }
 
-ROSServer::ROSServer(std::string node_name, std::shared_ptr<statsdcc::consumers::Consumer> consumer)
-  : Server(1, consumer), node_name(node_name), node_handle("~"), topics_rules(), stat_map()
+ROSServer::ROSServer(std::string node_name, std::shared_ptr<consumers::Consumer> consumer,
+                     const std::shared_ptr<BackendContainer> &backend_container)
+  : Server(1, consumer)
+  , node_name(node_name)
+  , backend_container(backend_container)
+  , node_handle("~")
+  , topics_rules()
+  , stat_map()
+  , ledger(new Ledger())
+  , flush_ledger(false)
+  , ledger_timer()
+  , flusher_guard()
 {
   createStatsSubs();
+
+  auto ledge_flusher = [&](const ros::TimerEvent &/*event*/)
+  {
+    flush_ledger = true;
+  };
+
+  ledger_timer = node_handle.createTimer(ros::Duration(::config->frequency), ledge_flusher);
 }
 
 void ROSServer::createStatsSubs()
@@ -107,8 +126,10 @@ void ROSServer::createStatsSubs()
 
         ::logger->info("Creating subscriber for " + topic_name);
 
+        // skip '/' character from the topic name
         subs.push_back(node_handle.subscribe<pal_statistics_msgs::Statistics>(
-            topic_name, 1000, boost::bind(&ROSServer::statisticsCallback, this, _1, i)));
+            topic_name, 1000,
+            boost::bind(&ROSServer::statisticsCallback, this, _1, topic_name.substr(1), i)));
       }
       else
       {
@@ -119,15 +140,17 @@ void ROSServer::createStatsSubs()
 }
 
 void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstPtr &statistics,
-                                   int rules_index)
+                                   const std::string &topic_name, int rules_index)
 {
   ros::Time before = ros::Time::now();
 
   const Rules rules = topics_rules[rules_index];
   std::smatch result;
 
-  /// @todo consumer->consume(metric) call seems thread safe, i.e., data ends up
-  /// in a boost::lockfree::queue. Maybe we can send the metrics in parallel? See OpenMP
+  /// @todo concurrency is not an issue just because callbacks are serialized
+  /// just in case -> one ledger per topic
+  /// @todo avoid copying the ledger, just switch pointers!
+
   for (auto stat = statistics->statistics.begin(); stat != statistics->statistics.end(); ++stat)
   {
     /// @note using map to cache results of regex matches
@@ -136,9 +159,7 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
     {
       for (auto metric_type = entry->second.begin(); metric_type != entry->second.end(); ++metric_type)
       {
-        const std::string metric =
-            stat->name + ":" + std::to_string(stat->value) + "|" + *metric_type;
-        this->consumer->consume(metric, stat->name);
+        ledger->buffer(stat->name, stat->value, *metric_type);
       }
     }
     else
@@ -158,12 +179,10 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
           {
             stat_map[stat->name].push_back(*metric_type);
 
-            const std::string metric =
-                stat->name + ":" + std::to_string(stat->value) + "|" + *metric_type;
-            this->consumer->consume(metric);
+            ledger->buffer(stat->name, stat->value, *metric_type);
           }
           // skip rest of rules after a valid match
-          continue;
+          break;
         }
       }
 
@@ -176,8 +195,23 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
     }
   }
 
+  if (flush_ledger)
+  {
+    // process and flush ledger in separate thread
+    flusher_guard.reset(new ThreadGuard(std::thread(
+        &BackendContainer::processAndFlush, backend_container, Ledger(*this->ledger), 0)));
+
+    // delete previous ledger and create new one
+    ledger.reset(new Ledger());
+
+    flush_ledger = false;
+  }
+
   ros::Time after = ros::Time::now();
-  // ::logger->info("callback took: " + std::to_string((after - before).toSec()));
+
+  const std::string stat_name = "statsdcc." + topic_name + ".callback_processing_time";
+  const double stat_value = (after - before).toSec();
+  ledger->buffer(stat_name, stat_value, "ms");
 }
 
 }  // namespace socket
