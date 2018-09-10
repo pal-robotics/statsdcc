@@ -147,6 +147,10 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
   const Rules rules = topics_rules[rules_index];
   std::smatch result;
 
+  /// @todo concurrency is not an issue just because callbacks are serialized
+  /// just in case -> one ledger per topic
+  /// @todo avoid copying the ledger, just switch pointers!
+
   for (auto stat = statistics->statistics.begin(); stat != statistics->statistics.end(); ++stat)
   {
     /// @note using map to cache results of regex matches
