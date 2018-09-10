@@ -2,6 +2,21 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'increase_performance' into 'erbium-devel'
+  Increase performance
+  See merge request qa/statsdcc!6
+* Replaced continue with break
+* Added some @todo's
+* Now processes the ledger in the separate thread too
+* Increased workers sleep to 100 ns
+* ros_server now has its own ledger and flushes directly to the backend
+* Added introspection. Now logs the time for processing metrics
+* Added introspection. Now logs the time for processing a callback
+* Added unixtime_ns()
+* Contributors: Jordan Palacios
+
 0.0.3 (2018-08-08)
 ------------------
 * Merge branch 'carbon_backend_stats' into 'erbium-devel'
