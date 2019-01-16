@@ -5,6 +5,8 @@ add_library (tcp_server net/servers/socket/tcp_server.cc)
 add_library (udp_server net/servers/socket/udp_server.cc)
 
 add_library (ros_server net/servers/socket/ros_server.cc)
+target_link_libraries(ros_server ${catkin_LIBRARIES} ledger)
+add_dependencies(ros_server ledger)
 
 add_library (aggregator_http_server net/servers/http/aggregator/http_server.cc)
 add_library (proxy_http_server net/servers/http/proxy/http_server.cc)
