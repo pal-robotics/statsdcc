@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.5 (2019-01-25)
+------------------
 * Merge branch 'clang-fixes' into 'erbium-devel'
   Clang fixes
   See merge request third-party/statsdcc!7
