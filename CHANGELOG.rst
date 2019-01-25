@@ -2,6 +2,14 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'clang-fixes' into 'erbium-devel'
+  Clang fixes
+  See merge request third-party/statsdcc!7
+* Clang fixes
+* Contributors: Victor Lopez
+
 0.0.4 (2018-09-10)
 ------------------
 * Merge branch 'increase_performance' into 'erbium-devel'
