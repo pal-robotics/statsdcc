@@ -70,19 +70,19 @@ private:
                           const std::string& topic_name, int rules_index);
 
 private:
-  std::string node_name;
+  std::string node_name_;
 
-  std::shared_ptr<BackendContainer> backend_container;
+  std::shared_ptr<BackendContainer> backend_container_;
 
-  ros::NodeHandle node_handle;
-  std::vector<ros::Subscriber> subs;
-  std::vector<Rules> topics_rules;
-  StatMap stat_map;
+  ros::NodeHandle node_handle_;
+  std::vector<ros::Subscriber> subs_;
+  std::vector<Rules> topics_rules_;
+  StatMap stat_map_;
 
-  std::unique_ptr<Ledger> ledger;
-  bool flush_ledger;
-  ros::Timer ledger_timer;
-  std::unique_ptr<ThreadGuard> flusher_guard;
+  std::unique_ptr<Ledger> ledger_;
+  bool flush_ledger_;
+  ros::Timer ledger_timer_;
+  std::unique_ptr<ThreadGuard> flusher_guard_;
 };
 
 }  // namespace socket

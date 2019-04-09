@@ -82,34 +82,34 @@ ROSServer::Rules to_rules(const XmlRpc::XmlRpcValue &stats)
 ROSServer::ROSServer(std::string node_name, std::shared_ptr<consumers::Consumer> consumer,
                      const std::shared_ptr<BackendContainer> &backend_container)
   : Server(1, consumer)
-  , node_name(node_name)
-  , backend_container(backend_container)
-  , node_handle("~")
-  , topics_rules()
-  , stat_map()
-  , ledger(new Ledger())
-  , flush_ledger(false)
-  , ledger_timer()
-  , flusher_guard()
+  , node_name_(node_name)
+  , backend_container_(backend_container)
+  , node_handle_("~")
+  , topics_rules_()
+  , stat_map_()
+  , ledger_(new Ledger())
+  , flush_ledger_(false)
+  , ledger_timer_()
+  , flusher_guard_()
 {
   createStatsSubs();
 
-  auto ledge_flusher = [&](const ros::TimerEvent & /*event*/) { flush_ledger = true; };
+  auto ledge_flusher = [&](const ros::TimerEvent & /*event*/) { flush_ledger_ = true; };
 
-  ledger_timer = node_handle.createTimer(ros::Duration(::config->frequency), ledge_flusher);
+  ledger_timer_ = node_handle_.createTimer(ros::Duration(::config->frequency), ledge_flusher);
 }
 
 void ROSServer::createStatsSubs()
 {
   // retrieve statistics rules
-  if (node_handle.hasParam("topics"))
+  if (node_handle_.hasParam("topics"))
   {
     ::logger->info("Retrieving topics list");
 
     XmlRpc::XmlRpcValue topics, topic;
     std::string topic_name;
 
-    node_handle.getParam("topics", topics);
+    node_handle_.getParam("topics", topics);
     ROS_ASSERT(topics.getType() == XmlRpc::XmlRpcValue::TypeArray);
 
     for (int i = 0; i < topics.size(); ++i)
@@ -125,12 +125,12 @@ void ROSServer::createStatsSubs()
         topic_name = static_cast<std::string>(topic["name"]);
 
         // convert XmlRpc stats in an more iterate friendly type
-        topics_rules.push_back(to_rules(topic["stats"]));
+        topics_rules_.push_back(to_rules(topic["stats"]));
 
         ::logger->info("Creating subscriber for " + topic_name);
 
         // skip '/' character from the topic name
-        subs.push_back(node_handle.subscribe<pal_statistics_msgs::Statistics>(
+        subs_.push_back(node_handle_.subscribe<pal_statistics_msgs::Statistics>(
             topic_name, 1000,
             boost::bind(&ROSServer::statisticsCallback, this, _1, topic_name.substr(1), i)));
       }
@@ -147,7 +147,7 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
 {
   ros::Time before = ros::Time::now();
 
-  const Rules rules = topics_rules[rules_index];
+  const Rules rules = topics_rules_[rules_index];
   std::smatch result;
 
   /// @todo concurrency is not an issue just because callbacks are serialized
@@ -157,12 +157,12 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
   for (auto stat = statistics->statistics.begin(); stat != statistics->statistics.end(); ++stat)
   {
     /// @note using map to cache results of regex matches
-    auto entry = stat_map.find(stat->name);
-    if (entry != stat_map.end())
+    auto entry = stat_map_.find(stat->name);
+    if (entry != stat_map_.end())
     {
       for (auto metric_type = entry->second.begin(); metric_type != entry->second.end(); ++metric_type)
       {
-        ledger->buffer(stat->name, stat->value, *metric_type);
+        ledger_->buffer(stat->name, stat->value, *metric_type);
       }
     }
     else
@@ -171,7 +171,7 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
       {
         if (std::regex_match(stat->name, result, std::regex(rule->first)))
         {
-          stat_map[stat->name] = MetricTypes();
+          stat_map_[stat->name] = MetricTypes();
           if (rule->second.empty())
           {
             ::logger->warn(stat->name + " has no metric types defined. Stats won't be "
@@ -181,9 +181,9 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
           for (auto metric_type = rule->second.begin(); metric_type != rule->second.end();
                ++metric_type)
           {
-            stat_map[stat->name].push_back(*metric_type);
+            stat_map_[stat->name].push_back(*metric_type);
 
-            ledger->buffer(stat->name, stat->value, *metric_type);
+            ledger_->buffer(stat->name, stat->value, *metric_type);
           }
           // skip rest of rules after a valid match
           break;
@@ -192,31 +192,31 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
 
       // if no valid rule was found, guarantee we are not looking for a valid regex each
       // time
-      if (stat_map.find(stat->name) == stat_map.end())
+      if (stat_map_.find(stat->name) == stat_map_.end())
       {
-        stat_map[stat->name] = MetricTypes();
+        stat_map_[stat->name] = MetricTypes();
         ::logger->warn(stat->name + " is not matched by any rule. Stat won't be logged");
       }
     }
   }
 
-  if (flush_ledger)
+  if (flush_ledger_)
   {
     // process and flush ledger in separate thread
-    flusher_guard.reset(new ThreadGuard(std::thread(
-        &BackendContainer::processAndFlush, backend_container, Ledger(*this->ledger), 0)));
+    flusher_guard_.reset(new ThreadGuard(std::thread(
+        &BackendContainer::processAndFlush, backend_container_, Ledger(*this->ledger_), 0)));
 
     // delete previous ledger and create new one
-    ledger.reset(new Ledger());
+    ledger_.reset(new Ledger());
 
-    flush_ledger = false;
+    flush_ledger_ = false;
   }
 
   ros::Time after = ros::Time::now();
 
   const std::string stat_name = "statsdcc." + topic_name + ".callback_processing_time";
   const double stat_value = (after - before).toSec();
-  ledger->buffer(stat_name, stat_value, "ms");
+  ledger_->buffer(stat_name, stat_value, "ms");
 }
 
 }  // namespace socket
