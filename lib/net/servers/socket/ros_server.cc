@@ -19,8 +19,14 @@
 #include "statsdcc/net/wrapper.h"
 #include "statsdcc/os.h"
 
-namespace statsdcc { namespace net { namespace servers { namespace socket {
-
+namespace statsdcc
+{
+namespace net
+{
+namespace servers
+{
+namespace socket
+{
 namespace
 {
 ROSServer::Rules to_rules(const XmlRpc::XmlRpcValue &stats)
@@ -44,19 +50,19 @@ ROSServer::Rules to_rules(const XmlRpc::XmlRpcValue &stats)
 
         const std::string metric_type = static_cast<std::string>(stat["type"][j]);
         // converto to "c", "ms", "g" or "s"
-        if(metric_type == "c" || metric_type == "counter")
+        if (metric_type == "c" || metric_type == "counter")
         {
           metric_types.push_back("c");
         }
-        else if(metric_type == "g" || metric_type == "gauge")
+        else if (metric_type == "g" || metric_type == "gauge")
         {
           metric_types.push_back("g");
         }
-        else if(metric_type == "t" || metric_type == "timer")
+        else if (metric_type == "t" || metric_type == "timer")
         {
           metric_types.push_back("ms");
         }
-        else if(metric_type == "s" || metric_type == "set")
+        else if (metric_type == "s" || metric_type == "set")
         {
           metric_types.push_back("s");
         }
@@ -88,10 +94,7 @@ ROSServer::ROSServer(std::string node_name, std::shared_ptr<consumers::Consumer>
 {
   createStatsSubs();
 
-  auto ledge_flusher = [&](const ros::TimerEvent &/*event*/)
-  {
-    flush_ledger = true;
-  };
+  auto ledge_flusher = [&](const ros::TimerEvent & /*event*/) { flush_ledger = true; };
 
   ledger_timer = node_handle.createTimer(ros::Duration(::config->frequency), ledge_flusher);
 }
@@ -169,9 +172,10 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
         if (std::regex_match(stat->name, result, std::regex(rule->first)))
         {
           stat_map[stat->name] = MetricTypes();
-          if(rule->second.empty())
+          if (rule->second.empty())
           {
-            ::logger->warn(stat->name + " has no metric types defined. Stats won't be logged");
+            ::logger->warn(stat->name + " has no metric types defined. Stats won't be "
+                                        "logged");
           }
 
           for (auto metric_type = rule->second.begin(); metric_type != rule->second.end();
@@ -186,8 +190,9 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
         }
       }
 
-      // if no valid rule was found, guarantee we are not looking for a valid regex each time
-      if(stat_map.find(stat->name) == stat_map.end())
+      // if no valid rule was found, guarantee we are not looking for a valid regex each
+      // time
+      if (stat_map.find(stat->name) == stat_map.end())
       {
         stat_map[stat->name] = MetricTypes();
         ::logger->warn(stat->name + " is not matched by any rule. Stat won't be logged");

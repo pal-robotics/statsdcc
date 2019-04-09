@@ -19,23 +19,28 @@
 #include "statsdcc/net/servers/socket/server.h"
 #include "statsdcc/net/wrapper.h"
 
-namespace statsdcc {
-
+namespace statsdcc
+{
 // forward declarations
 class BackendContainer;
 class Ledger;
 
-namespace net { namespace servers { namespace socket {
-
-class ROSServer : public Server {
- public:
+namespace net
+{
+namespace servers
+{
+namespace socket
+{
+class ROSServer : public Server
+{
+public:
   typedef std::vector<std::string> MetricTypes;
   typedef std::pair<std::string, MetricTypes> Rule;
   typedef std::vector<Rule> Rules;
 
   typedef std::map<std::string, MetricTypes> StatMap;
 
- public:
+public:
   /**
    * A constructor
    *
@@ -58,7 +63,7 @@ class ROSServer : public Server {
    */
   void start();
 
- private:
+private:
   void createStatsSubs();
 
   void statisticsCallback(const pal_statistics_msgs::Statistics::ConstPtr& statistics,
