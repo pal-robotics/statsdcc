@@ -86,6 +86,7 @@ ROSServer::ROSServer(std::string node_name, std::shared_ptr<consumers::Consumer>
   , backend_container_(backend_container)
   , node_handle_("~")
   , topics_rules_()
+  , topics_stats_names_()
   , stat_map_()
   , ledger_(new Ledger())
   , flush_ledger_(false)
@@ -127,12 +128,25 @@ void ROSServer::createStatsSubs()
         // convert XmlRpc stats in an more iterate friendly type
         topics_rules_.push_back(to_rules(topic["stats"]));
 
-        ::logger->info("Creating subscriber for " + topic_name);
+        ::logger->info("Creating subscribers for " + topic_name);
 
-        // skip '/' character from the topic name
-        subs_.push_back(node_handle_.subscribe<pal_statistics_msgs::Statistics>(
-            topic_name, 1000,
-            boost::bind(&ROSServer::statisticsCallback, this, _1, topic_name.substr(1), i)));
+        // skip '/' character from the topic names
+
+        /// @todo delete this
+        //        subs_.push_back(node_handle_.subscribe<pal_statistics_msgs::Statistics>(
+        //            topic_name, 1000,
+        //            boost::bind(&ROSServer::statisticsCallback, this, _1,
+        //            topic_name.substr(1), i)));
+
+
+
+        subs_.push_back(node_handle_.subscribe<pal_statistics_msgs::StatisticsNames>(
+            topic_name + "/names", 1000,
+            boost::bind(&ROSServer::namesCallback, this, _1, topic_name.substr(1), i)));
+
+        subs_.push_back(node_handle_.subscribe<pal_statistics_msgs::StatisticsValues>(
+            topic_name + "/values", 1000,
+            boost::bind(&ROSServer::valuesCallback, this, _1, topic_name.substr(1), i)));
       }
       else
       {
@@ -142,9 +156,25 @@ void ROSServer::createStatsSubs()
   }
 }
 
-void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstPtr &statistics,
-                                   const std::string &topic_name, int rules_index)
+void ROSServer::namesCallback(const pal_statistics_msgs::StatisticsNames::ConstPtr &names,
+                              const std::string &topic_name, int /*rules_index*/)
 {
+  ::logger->info("Statistics names from " + topic_name + " received");
+  topics_stats_names_[topic_name] = std::make_pair(names->names, names->names_version);
+}
+
+void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::ConstPtr &values,
+                               const std::string &topic_name, int rules_index)
+{
+  // discard if no names for this topic were received or versions differ
+  if (topics_stats_names_[topic_name].first.empty() ||
+      topics_stats_names_[topic_name].second != values->names_version)
+  {
+    ::logger->warn("Discarding values from " + topic_name + ", names and values version "
+                                                            "differ");
+    return;
+  }
+
   ros::Time before = ros::Time::now();
 
   const Rules rules = topics_rules_[rules_index];
@@ -154,36 +184,39 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
   /// just in case -> one ledger per topic
   /// @todo avoid copying the ledger, just switch pointers!
 
-  for (auto stat = statistics->statistics.begin(); stat != statistics->statistics.end(); ++stat)
+  for (size_t i = 0; i < values->values.size(); ++i)
   {
+    const std::string &stat_name = topics_stats_names_[topic_name].first[i];
+    const double stat_value = values->values[i];
+
     /// @note using map to cache results of regex matches
-    auto entry = stat_map_.find(stat->name);
+    auto entry = stat_map_.find(stat_name);
     if (entry != stat_map_.end())
     {
       for (auto metric_type = entry->second.begin(); metric_type != entry->second.end(); ++metric_type)
       {
-        ledger_->buffer(stat->name, stat->value, *metric_type);
+        ledger_->buffer(stat_name, stat_value, *metric_type);
       }
     }
     else
     {
       for (auto rule = rules.begin(); rule != rules.end(); ++rule)
       {
-        if (std::regex_match(stat->name, result, std::regex(rule->first)))
+        if (std::regex_match(stat_name, result, std::regex(rule->first)))
         {
-          stat_map_[stat->name] = MetricTypes();
+          stat_map_[stat_name] = MetricTypes();
           if (rule->second.empty())
           {
-            ::logger->warn(stat->name + " has no metric types defined. Stats won't be "
-                                        "logged");
+            ::logger->warn(stat_name + " has no metric types defined. Stats won't be "
+                                       "logged");
           }
 
           for (auto metric_type = rule->second.begin(); metric_type != rule->second.end();
                ++metric_type)
           {
-            stat_map_[stat->name].push_back(*metric_type);
+            stat_map_[stat_name].push_back(*metric_type);
 
-            ledger_->buffer(stat->name, stat->value, *metric_type);
+            ledger_->buffer(stat_name, stat_value, *metric_type);
           }
           // skip rest of rules after a valid match
           break;
@@ -192,10 +225,10 @@ void ROSServer::statisticsCallback(const pal_statistics_msgs::Statistics::ConstP
 
       // if no valid rule was found, guarantee we are not looking for a valid regex each
       // time
-      if (stat_map_.find(stat->name) == stat_map_.end())
+      if (stat_map_.find(stat_name) == stat_map_.end())
       {
-        stat_map_[stat->name] = MetricTypes();
-        ::logger->warn(stat->name + " is not matched by any rule. Stat won't be logged");
+        stat_map_[stat_name] = MetricTypes();
+        ::logger->warn(stat_name + " is not matched by any rule. Stat won't be logged");
       }
     }
   }

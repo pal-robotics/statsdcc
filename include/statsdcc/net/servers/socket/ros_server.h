@@ -14,7 +14,8 @@
 #include <ros/subscriber.h>
 #include <ros/timer.h>
 
-#include <pal_statistics_msgs/Statistics.h>
+#include <pal_statistics_msgs/StatisticsNames.h>
+#include <pal_statistics_msgs/StatisticsValues.h>
 
 #include "statsdcc/net/servers/socket/server.h"
 #include "statsdcc/net/wrapper.h"
@@ -39,6 +40,10 @@ public:
   typedef std::vector<Rule> Rules;
 
   typedef std::map<std::string, MetricTypes> StatMap;
+
+  typedef std::vector<std::string> StatsNames;
+  typedef std::pair<StatsNames, uint32_t> StatsNamesVersion;
+  typedef std::map<std::string, StatsNamesVersion> TopicsStatsNames;
 
 public:
   /**
@@ -66,8 +71,10 @@ public:
 private:
   void createStatsSubs();
 
-  void statisticsCallback(const pal_statistics_msgs::Statistics::ConstPtr& statistics,
-                          const std::string& topic_name, int rules_index);
+  void namesCallback(const pal_statistics_msgs::StatisticsNames::ConstPtr& names,
+                     const std::string& topic_name, int rules_index);
+  void valuesCallback(const pal_statistics_msgs::StatisticsValues::ConstPtr& values,
+                      const std::string& topic_name, int rules_index);
 
 private:
   std::string node_name_;
@@ -77,6 +84,7 @@ private:
   ros::NodeHandle node_handle_;
   std::vector<ros::Subscriber> subs_;
   std::vector<Rules> topics_rules_;
+  TopicsStatsNames topics_stats_names_;
   StatMap stat_map_;
 
   std::unique_ptr<Ledger> ledger_;
