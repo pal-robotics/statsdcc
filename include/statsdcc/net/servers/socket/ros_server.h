@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <utility>
 
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -39,11 +40,11 @@ public:
   typedef std::pair<std::string, MetricTypes> Rule;
   typedef std::vector<Rule> Rules;
 
-  typedef std::map<std::string, MetricTypes> StatMap;
+  typedef std::unordered_map<std::string, MetricTypes> StatMap;
 
   typedef std::vector<std::string> StatsNames;
   typedef std::pair<StatsNames, uint32_t> StatsNamesVersion;
-  typedef std::map<std::string, StatsNamesVersion> TopicsStatsNames;
+  typedef std::unordered_map<std::string, StatsNamesVersion> TopicsStatsNames;
 
 public:
   /**

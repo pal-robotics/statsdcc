@@ -32,9 +32,6 @@ void Ledger::buffer(const std::string& metric) {
   // record number of calls to buffer method
   ++this->statsd_metrics["metrics_processed"];
 
-  // setup the names for the stats stored in counters
-  std::string bad_lines_seen = ::config->name + ".bad_lines_seen";
-
   sscanf(metric_csty,
          "%" MAX_TOKEN_STRING_LENGTH "[^:]:" \
          "%" MAX_TOKEN_STRING_LENGTH "[^|]|" \
@@ -88,11 +85,13 @@ void Ledger::buffer(const std::string& metric) {
 
   if (bad_line) {
     ::logger->info("Bad line: " + metric);
+    // setup the names for the stats stored in counters
+    std::string bad_lines_seen = ::config->name + ".bad_lines_seen";
     ++this->counters[bad_lines_seen];
     return;
   }
 
-  ++this->frequency[metric_name];
+  // ++this->frequency[metric_name];
 
   switch (type) {
     case MetricType::timer:
@@ -128,10 +127,7 @@ void Ledger::buffer(const std::string &metric_name, double metric_value,
   double sample_rate = 1;
 
   // record number of calls to buffer method
-  ++this->statsd_metrics["metrics_processed"];
-
-  // setup the names for the stats stored in counters
-  std::string bad_lines_seen = ::config->name + ".bad_lines_seen";
+  // ++this->statsd_metrics["metrics_processed"];
 
   // track bad lines
   bool bad_line = false;
@@ -158,11 +154,13 @@ void Ledger::buffer(const std::string &metric_name, double metric_value,
 
   if (bad_line) {
     ::logger->info("Bad line: " + metric_name + "|" + metric_type);
+    // setup the names for the stats stored in counters
+    std::string bad_lines_seen = ::config->name + ".bad_lines_seen";
     ++this->counters[bad_lines_seen];
     return;
   }
 
-  ++this->frequency[metric_name];
+  // ++this->frequency[metric_name];
 
   switch (type) {
     case MetricType::timer:

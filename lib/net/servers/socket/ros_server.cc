@@ -166,9 +166,10 @@ void ROSServer::namesCallback(const pal_statistics_msgs::StatisticsNames::ConstP
 void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::ConstPtr &values,
                                const std::string &topic_name, int rules_index)
 {
+  const auto &topic_stats_name = topics_stats_names_[topic_name];
   // discard if no names for this topic were received or versions differ
-  if (topics_stats_names_[topic_name].first.empty() ||
-      topics_stats_names_[topic_name].second != values->names_version)
+  if (topic_stats_name.first.empty() ||
+      topic_stats_name.second != values->names_version)
   {
     ::logger->warn("Discarding values from " + topic_name + ", names and values version "
                                                             "differ");
@@ -177,20 +178,19 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
 
   ros::Time before = ros::Time::now();
 
-  const Rules rules = topics_rules_[rules_index];
+  const Rules &rules = topics_rules_[rules_index];
   std::smatch result;
 
   /// @todo concurrency is not an issue just because callbacks are serialized
   /// just in case -> one ledger per topic
   /// @todo avoid copying the ledger, just switch pointers!
-
   for (size_t i = 0; i < values->values.size(); ++i)
   {
-    const std::string &stat_name = topics_stats_names_[topic_name].first[i];
+    const std::string &stat_name = topic_stats_name.first[i];
     const double stat_value = values->values[i];
 
     /// @note using map to cache results of regex matches
-    auto entry = stat_map_.find(stat_name);
+    const auto &entry = stat_map_.find(stat_name);
     if (entry != stat_map_.end())
     {
       for (auto metric_type = entry->second.begin(); metric_type != entry->second.end(); ++metric_type)
