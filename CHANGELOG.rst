@@ -2,6 +2,17 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'optimized-msg' into 'erbium-devel'
+  Optimized statistics msg
+  See merge request third-party/statsdcc!8
+* Changes to increase performance
+* Adapted ros_server to new Statistics message format
+* Renamed private member variables
+* Cosmetics, formatting
+* Contributors: Jordan Palacios, Victor Lopez
+
 0.0.5 (2019-01-25)
 ------------------
 * Merge branch 'clang-fixes' into 'erbium-devel'
