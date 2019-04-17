@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <utility>
 
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -14,28 +15,38 @@
 #include <ros/subscriber.h>
 #include <ros/timer.h>
 
-#include <pal_statistics_msgs/Statistics.h>
+#include <pal_statistics_msgs/StatisticsNames.h>
+#include <pal_statistics_msgs/StatisticsValues.h>
 
 #include "statsdcc/net/servers/socket/server.h"
 #include "statsdcc/net/wrapper.h"
 
-namespace statsdcc {
-
+namespace statsdcc
+{
 // forward declarations
 class BackendContainer;
 class Ledger;
 
-namespace net { namespace servers { namespace socket {
-
-class ROSServer : public Server {
- public:
+namespace net
+{
+namespace servers
+{
+namespace socket
+{
+class ROSServer : public Server
+{
+public:
   typedef std::vector<std::string> MetricTypes;
   typedef std::pair<std::string, MetricTypes> Rule;
   typedef std::vector<Rule> Rules;
 
-  typedef std::map<std::string, MetricTypes> StatMap;
+  typedef std::unordered_map<std::string, MetricTypes> StatMap;
 
- public:
+  typedef std::vector<std::string> StatsNames;
+  typedef std::pair<StatsNames, uint32_t> StatsNamesVersion;
+  typedef std::unordered_map<std::string, StatsNamesVersion> TopicsStatsNames;
+
+public:
   /**
    * A constructor
    *
@@ -58,26 +69,29 @@ class ROSServer : public Server {
    */
   void start();
 
- private:
+private:
   void createStatsSubs();
 
-  void statisticsCallback(const pal_statistics_msgs::Statistics::ConstPtr& statistics,
-                          const std::string& topic_name, int rules_index);
+  void namesCallback(const pal_statistics_msgs::StatisticsNames::ConstPtr& names,
+                     const std::string& topic_name, int rules_index);
+  void valuesCallback(const pal_statistics_msgs::StatisticsValues::ConstPtr& values,
+                      const std::string& topic_name, int rules_index);
 
 private:
-  std::string node_name;
+  std::string node_name_;
 
-  std::shared_ptr<BackendContainer> backend_container;
+  std::shared_ptr<BackendContainer> backend_container_;
 
-  ros::NodeHandle node_handle;
-  std::vector<ros::Subscriber> subs;
-  std::vector<Rules> topics_rules;
-  StatMap stat_map;
+  ros::NodeHandle node_handle_;
+  std::vector<ros::Subscriber> subs_;
+  std::vector<Rules> topics_rules_;
+  TopicsStatsNames topics_stats_names_;
+  StatMap stat_map_;
 
-  std::unique_ptr<Ledger> ledger;
-  bool flush_ledger;
-  ros::Timer ledger_timer;
-  std::unique_ptr<ThreadGuard> flusher_guard;
+  std::unique_ptr<Ledger> ledger_;
+  bool flush_ledger_;
+  ros::Timer ledger_timer_;
+  std::unique_ptr<ThreadGuard> flusher_guard_;
 };
 
 }  // namespace socket
