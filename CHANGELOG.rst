@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.6 (2019-04-17)
+------------------
 * Merge branch 'optimized-msg' into 'erbium-devel'
   Optimized statistics msg
   See merge request third-party/statsdcc!8
