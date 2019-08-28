@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.7 (2019-08-28)
+------------------
 * Disable PAL flags
 * Contributors: Victor Lopez
 
