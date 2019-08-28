@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 2.8.12)
 
 project (statsdcc CXX)
 
+set(DISABLE_PAL_FLAGS TRUE)
 find_package(catkin REQUIRED
     COMPONENTS
         pal_statistics_msgs
