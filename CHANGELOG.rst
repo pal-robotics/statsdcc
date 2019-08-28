@@ -2,6 +2,11 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Disable PAL flags
+* Contributors: Victor Lopez
+
 0.0.6 (2019-04-17)
 ------------------
 * Merge branch 'optimized-msg' into 'erbium-devel'
