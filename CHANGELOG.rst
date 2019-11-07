@@ -2,6 +2,14 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'rename_net' into 'erbium-devel'
+  Rename library with generic name 'net'
+  See merge request third-party/statsdcc!9
+* Renamed library with generic name 'net'
+* Contributors: Jordan Palacios
+
 0.0.7 (2019-08-28)
 ------------------
 * Disable PAL flags
