@@ -22,7 +22,7 @@ target_link_libraries (statsdcc
   stdout
   repeater
   hashring
-  net
+  statsdccnet
   backend_config
   config
   logger
@@ -42,10 +42,10 @@ target_link_libraries (proxy
   udp_server
   ros_server
   status
-  net
+  statsdccnet
   proxy_worker
   proxy_config
-  net
+  statsdccnet
   config
   logger
   ${JSONCPP}

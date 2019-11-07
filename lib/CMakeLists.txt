@@ -1,4 +1,4 @@
-add_library (net net/lib.cc)
+add_library (statsdccnet net/lib.cc)
 
 add_library (tcp_server net/servers/socket/tcp_server.cc)
 
@@ -30,7 +30,7 @@ add_library (status status.cc)
 
 install(
     TARGETS
-        net tcp_server udp_server ros_server aggregator_http_server proxy_http_server
+        statsdccnet tcp_server udp_server ros_server aggregator_http_server proxy_http_server
         carbon stdout repeater aggregator_consumer hashring logger status
     ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
