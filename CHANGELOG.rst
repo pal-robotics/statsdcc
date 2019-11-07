@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.8 (2019-11-07)
+------------------
 * Merge branch 'rename_net' into 'erbium-devel'
   Rename library with generic name 'net'
   See merge request third-party/statsdcc!9
