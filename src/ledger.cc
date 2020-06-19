@@ -95,8 +95,11 @@ void Ledger::buffer(const std::string& metric) {
 
   switch (type) {
     case MetricType::timer:
-      this->timer_counters[metric_name] += (1 / sample_rate);
-      this->timers[metric_name].push_back(metric_value);
+      {
+        auto &timer_data = this->timers[metric_name];
+        timer_data.timer_counter += (1 / sample_rate);
+        timer_data.timers.push_back(metric_value);
+      }
       break;
 
     case MetricType::gauge:
@@ -164,8 +167,11 @@ void Ledger::buffer(const std::string &metric_name, double metric_value,
 
   switch (type) {
     case MetricType::timer:
-      this->timer_counters[metric_name] += (1 / sample_rate);
-      this->timers[metric_name].push_back(metric_value);
+      {
+        auto &timer_data = this->timers[metric_name];
+        timer_data.timer_counter += (1 / sample_rate);
+        timer_data.timers.push_back(metric_value);
+      }
       break;
 
     case MetricType::gauge:
@@ -208,7 +214,7 @@ void Ledger::process() {
       current_timer_data["count"] = current_timer_data["count_ps"] = 0;
     } else {
       // get sorted values
-      std::vector<double> values(timer_key_value_pair_itr->second);
+      std::vector<double> values(timer_key_value_pair_itr->second.timers);
       std::sort(values.begin(), values.end());
 
       // get count, sum, mean, min, and max
@@ -264,7 +270,7 @@ void Ledger::process() {
 
       current_timer_data["upper"] = max;
       current_timer_data["lower"] = min;
-      current_timer_data["count"] = this->timer_counters[key];
+      current_timer_data["count"] = this->timers[key].timer_counter;
       current_timer_data["mean"] = mean;
     }
 

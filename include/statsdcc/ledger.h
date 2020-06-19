@@ -53,7 +53,6 @@ class Ledger {
   inline Ledger(const Ledger& ledger) :
     counters(ledger.counters),
     timers(ledger.timers),
-    timer_counters(ledger.timer_counters),
     gauges(ledger.gauges),
     sets(ledger.sets),
     counter_rates(ledger.counter_rates),
@@ -64,7 +63,6 @@ class Ledger {
   inline Ledger(const Ledger&& ledger) :
     counters(std::move(ledger.counters)),
     timers(std::move(ledger.timers)),
-    timer_counters(std::move(ledger.timer_counters)),
     gauges(std::move(ledger.gauges)),
     sets(std::move(ledger.sets)),
     counter_rates(std::move(ledger.counter_rates)),
@@ -75,7 +73,6 @@ class Ledger {
   inline Ledger& operator=(const Ledger& ledger) {
     this->counters = ledger.counters;
     this->timers = ledger.timers;
-    this->timer_counters = ledger.timer_counters;
     this->gauges = ledger.gauges;
     this->sets = ledger.sets;
     this->counter_rates = ledger.counter_rates;
@@ -87,7 +84,6 @@ class Ledger {
   inline Ledger& operator=(const Ledger&& ledger) {
     this->counters = std::move(ledger.counters);
     this->timers = std::move(ledger.timers);
-    this->timer_counters = std::move(ledger.timer_counters);
     this->gauges = std::move(ledger.gauges);
     this->sets = std::move(ledger.sets);
     this->counter_rates = std::move(ledger.counter_rates);
@@ -123,9 +119,13 @@ class Ledger {
   std::unordered_map<std::string, long long int> frequency;
 
  private:
+  struct TimerData
+  {
+    std::vector<double> timers;
+    double timer_counter;
+  };
   std::unordered_map<std::string, double> counters;
-  std::unordered_map<std::string, std::vector<double> > timers;
-  std::unordered_map<std::string, double> timer_counters;
+  std::unordered_map<std::string, TimerData> timers;
   std::unordered_map<std::string, double> gauges;
   std::unordered_map<std::string, std::unordered_set<std::string> > sets;
 
