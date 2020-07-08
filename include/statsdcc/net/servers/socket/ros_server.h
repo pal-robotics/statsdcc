@@ -26,7 +26,7 @@ namespace statsdcc
 // forward declarations
 class BackendContainer;
 class Ledger;
-
+class Metric;
 namespace net
 {
 namespace servers
@@ -37,14 +37,16 @@ class ROSServer : public Server
 {
 public:
   typedef std::vector<std::string> MetricTypes;
+  typedef std::vector<std::shared_ptr<statsdcc::Metric>> Metrics;
   typedef std::pair<std::string, MetricTypes> Rule;
   typedef std::vector<Rule> Rules;
 
-  typedef std::unordered_map<std::string, MetricTypes> StatMap;
+  typedef std::unordered_map<std::string, Metrics> StatMap;
 
   typedef std::vector<std::string> StatsNames;
   typedef std::pair<StatsNames, uint32_t> StatsNamesVersion;
   typedef std::unordered_map<std::string, StatsNamesVersion> TopicsStatsNames;
+  typedef std::unordered_map<std::string, std::vector<Metrics>> TopicMetrics;
 
 public:
   /**
@@ -86,7 +88,7 @@ private:
   std::vector<ros::Subscriber> subs_;
   std::vector<Rules> topics_rules_;
   TopicsStatsNames topics_stats_names_;
-  StatMap stat_map_;
+  TopicMetrics topic_metrics_;
 
   std::unique_ptr<Ledger> ledger_;
   bool flush_ledger_;

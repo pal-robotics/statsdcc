@@ -28,54 +28,47 @@ void Stdout::flush_stats(const Ledger& ledger, int flusher_id) {
   auto prefix = ::config->name + ".thread_" +
                   std::to_string(static_cast<long long int>(flusher_id));
 
-  // counters
-  for (auto counter_itr = ledger.counters.cbegin();
-      counter_itr != ledger.counters.cend();
-      ++counter_itr) {
-    std::string key = counter_itr->first;
-    std::string value =
-      std::to_string(static_cast<long double>(counter_itr->second));
+  for (const auto &m : ledger.metrics) {
+    const std::string &key = m.first;
+    Metric* metric = m.second.get();
+    Counter* counter = dynamic_cast<Counter*>(metric);
+    Timer* timer = dynamic_cast<Timer*>(metric);
+    Gauge* gauge = dynamic_cast<Gauge*>(metric);
+    if (counter)
+    {
+      std::string value =
+        std::to_string(static_cast<long double>(counter->counter_));
 
-    std::string value_per_second =
-      std::to_string(static_cast<long double>(ledger.counter_rates.at(key)));
+      std::string value_per_second =
+        std::to_string(static_cast<long double>(counter->counter_rate_));
 
-    out += key + ".rate " + value_per_second + ts_suffix +
-           key + ".count " + value + ts_suffix;
+      out += key + ".rate " + value_per_second + ts_suffix +
+             key + ".count " + value + ts_suffix;
 
-    ++num_stats;
-  }
-
-  // timers
-  for (auto timer_itr = ledger.timer_data.cbegin();
-      timer_itr != ledger.timer_data.cend();
-      ++timer_itr) {
-    std::string key = timer_itr->first;
-
-    for (auto timer_data_itr = timer_itr->second.cbegin();
-        timer_data_itr != timer_itr->second.cend();
-        ++timer_data_itr) {
-      std::string timer_data_key = timer_data_itr->first;
-
-      std::string value = std::to_string(
-        static_cast<long double>(timer_data_itr->second));
-
-      out += key + "." + timer_data_key + " " + value + ts_suffix;
+      ++num_stats;
     }
-    ++num_stats;
-  }
+    else if (timer)
+    {
+      for (auto timer_data_itr = timer->timer_data_.cbegin();
+          timer_data_itr != timer->timer_data_.cend();
+          ++timer_data_itr) {
+        std::string timer_data_key = timer_data_itr->first;
 
-  // gauges
-  for (auto gauge_itr = ledger.gauges.cbegin();
-      gauge_itr != ledger.gauges.cend();
-      ++gauge_itr) {
-    std::string key = gauge_itr->first;
+        std::string value = std::to_string(
+          static_cast<long double>(timer_data_itr->second));
 
-    std::string value = std::to_string(
-      static_cast<long double>(gauge_itr->second));
+        out += key + "." + timer_data_key + " " + value + ts_suffix;
+      }
+      ++num_stats;
+    }
+    else if (gauge) {
+      std::string value = std::to_string(
+        static_cast<long double>(gauge->gauge_));
 
-    out += key + " " + value + ts_suffix;
+      out += key + " " + value + ts_suffix;
 
-    ++num_stats;
+      ++num_stats;
+    }
   }
 
   // sets

@@ -87,7 +87,7 @@ void Ledger::buffer(const std::string& metric) {
     ::logger->info("Bad line: " + metric);
     // setup the names for the stats stored in counters
     std::string bad_lines_seen = ::config->name + ".bad_lines_seen";
-    ++this->counters[bad_lines_seen];
+    addBadLine(bad_lines_seen);
     return;
   }
 
@@ -96,20 +96,20 @@ void Ledger::buffer(const std::string& metric) {
   switch (type) {
     case MetricType::timer:
       {
-        auto &timer_data = this->timers[metric_name];
-        timer_data.timer_counter += (1 / sample_rate);
-        timer_data.timers.push_back(metric_value);
-      }
+      auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Timer));
+      ret.first->second->update(metric_value, sample_rate);
       break;
-
+      }
     case MetricType::gauge:
       {
         // check if +/- is specified
         char char_after_colon = metric_csty[metric.find_first_of(":") + 1];
         if (('+' == char_after_colon) || ('-' == char_after_colon)) {
-          this->gauges[metric_name] += metric_value;
+          auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new IncrementalGauge));
+          ret.first->second->update(metric_value, sample_rate);
         } else {
-          this->gauges[metric_name] = metric_value;
+          auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Gauge));
+          ret.first->second->update(metric_value, sample_rate);
         }
         break;
       }
@@ -118,12 +118,19 @@ void Ledger::buffer(const std::string& metric) {
       break;
 
     default:
-      this->counters[metric_name] += metric_value * (1 / sample_rate);
+      auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Counter));
+      ret.first->second->update(metric_value, sample_rate);
       break;
   }
 }
 
-void Ledger::buffer(const std::string &metric_name, double metric_value,
+void Ledger::buffer(const std::shared_ptr<Metric> &metric, double metric_value)
+{
+  double sample_rate = 1;
+  metric->update(metric_value, sample_rate);
+}
+
+std::shared_ptr<Metric> Ledger::buffer(const std::string &metric_name, double metric_value,
                     const std::string &metric_type)
 {
   MetricType type = MetricType::counter;
@@ -159,34 +166,36 @@ void Ledger::buffer(const std::string &metric_name, double metric_value,
     ::logger->info("Bad line: " + metric_name + "|" + metric_type);
     // setup the names for the stats stored in counters
     std::string bad_lines_seen = ::config->name + ".bad_lines_seen";
-    ++this->counters[bad_lines_seen];
-    return;
+    addBadLine(bad_lines_seen);
+    return nullptr;
   }
 
   // ++this->frequency[metric_name];
 
+
   switch (type) {
     case MetricType::timer:
       {
-        auto &timer_data = this->timers[metric_name];
-        timer_data.timer_counter += (1 / sample_rate);
-        timer_data.timers.push_back(metric_value);
+        auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Timer));
+        ret.first->second->update(metric_value, sample_rate);
+        return ret.first->second;
       }
-      break;
-
     case MetricType::gauge:
       {
         /// @todo +/- is specified
-        this->gauges[metric_name] = metric_value;
-        break;
+
+      auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Gauge));
+      ret.first->second->update(metric_value, sample_rate);
+      return ret.first->second;
       }
     case MetricType::set:
       /// @todo sets
-      break;
+      return  nullptr;
 
     default:
-      this->counters[metric_name] += metric_value * (1 / sample_rate);
-      break;
+      auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Counter));
+      ret.first->second->update(metric_value, sample_rate);
+      return ret.first->second;
   }
 }
 
@@ -196,25 +205,27 @@ void Ledger::process() {
 
   // process counters
   // calculate "per second" rate
-  for (auto counter_itr = this->counters.cbegin();
-      counter_itr != this->counters.cend();
-      ++counter_itr) {
-    this->counter_rates[counter_itr->first] =
-      counter_itr->second / ::config->frequency;
-  }
 
-  // process timers
-  for (auto timer_key_value_pair_itr = this->timers.cbegin();
-      timer_key_value_pair_itr != this->timers.cend();
-      ++timer_key_value_pair_itr) {
-    std::unordered_map<std::string, double> current_timer_data;
-    std::string key = timer_key_value_pair_itr->first;
+  for (auto &m : this->metrics) {
+    const std::string &key = m.first;
+    Metric* metric = m.second.get();
+    Counter* counter = dynamic_cast<Counter*>(metric);
+    Timer* timer = dynamic_cast<Timer*>(metric);
+    if (counter)
+    {
+      counter->counter_rate_ = counter->counter_ / ::config->frequency;
+    }
+    else if (timer)
+    {
+    // process timers
+    std::unordered_map<std::string, double> &current_timer_data = timer->timer_data_;
+    const std::string &key = m.first;
 
     if (key.length() <= 0) {
       current_timer_data["count"] = current_timer_data["count_ps"] = 0;
     } else {
       // get sorted values
-      std::vector<double> values(timer_key_value_pair_itr->second.timers);
+      std::vector<double> values(timer->timers_);
       std::sort(values.begin(), values.end());
 
       // get count, sum, mean, min, and max
@@ -270,13 +281,12 @@ void Ledger::process() {
 
       current_timer_data["upper"] = max;
       current_timer_data["lower"] = min;
-      current_timer_data["count"] = this->timers[key].timer_counter;
+      current_timer_data["count"] = timer->counter_;
       current_timer_data["mean"] = mean;
+      timer->timer_data_ = current_timer_data;
     }
-
-    this->timer_data[key] = current_timer_data;
   }  // foreach metric
-
+}
   this->statsd_metrics["processing_time"] =
     chrono::unixtime_ms() - start_time;
 }
@@ -285,6 +295,13 @@ void Ledger::setProcTime(std::int64_t value)
 {
   this->statsd_metrics["metrics_processing_time"] =
       this->statsd_metrics["metrics_processing_time"] + value;
+}
+
+void Ledger::addBadLine(const std::string &name)
+{
+  // Only emplaces first time
+  auto ret = metrics.emplace(name, std::shared_ptr<Metric>(new Counter));
+  ret.first->second->update(1, 1);
 }
 
 }  // namespace statsdcc

@@ -87,7 +87,7 @@ ROSServer::ROSServer(std::string node_name, std::shared_ptr<consumers::Consumer>
   , node_handle_("~")
   , topics_rules_()
   , topics_stats_names_()
-  , stat_map_()
+  , topic_metrics_()
   , ledger_(new Ledger())
   , flush_ledger_(false)
   , ledger_timer_()
@@ -161,12 +161,12 @@ void ROSServer::namesCallback(const pal_statistics_msgs::StatisticsNames::ConstP
 {
   ::logger->info("Statistics names from " + topic_name + " received");
   topics_stats_names_[topic_name] = std::make_pair(names->names, names->names_version);
+  topic_metrics_[topic_name].clear();
 }
 
 void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::ConstPtr &values,
                                const std::string &topic_name, int rules_index)
 {
-  auto begin = ros::Time::now();
   const auto &topic_stats_name = topics_stats_names_[topic_name];
   // discard if no names for this topic were received or versions differ
   if (topic_stats_name.first.empty() ||
@@ -185,27 +185,31 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
   /// @todo concurrency is not an issue just because callbacks are serialized
   /// just in case -> one ledger per topic
   /// @todo avoid copying the ledger, just switch pointers!
+  auto &metrics_vector = topic_metrics_[topic_name];
+  bool has_computed_metrics = !metrics_vector.empty();
+  if (!has_computed_metrics)
+  {
+    metrics_vector.resize(values->values.size());
+  }
   for (size_t i = 0; i < values->values.size(); ++i)
   {
     const std::string &stat_name = topic_stats_name.first[i];
     const double stat_value = values->values[i];
 
-    /// @note using map to cache results of regex matches
-    const auto &entry = stat_map_.find(stat_name);
-    if (entry != stat_map_.end())
+    if (has_computed_metrics)
     {
-      for (auto metric_type = entry->second.begin(); metric_type != entry->second.end(); ++metric_type)
+      for (auto metric = metrics_vector[i].begin(); metric != metrics_vector[i].end(); ++metric)
       {
-        ledger_->buffer(stat_name, stat_value, *metric_type);
+        ledger_->buffer(*metric, stat_value);
       }
     }
     else
     {
+      bool rule_found = false;
       for (auto rule = rules.begin(); rule != rules.end(); ++rule)
       {
         if (std::regex_match(stat_name, result, std::regex(rule->first)))
         {
-          stat_map_[stat_name] = MetricTypes();
           if (rule->second.empty())
           {
             ::logger->warn(stat_name + " has no metric types defined. Stats won't be "
@@ -215,20 +219,20 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
           for (auto metric_type = rule->second.begin(); metric_type != rule->second.end();
                ++metric_type)
           {
-            stat_map_[stat_name].push_back(*metric_type);
 
-            ledger_->buffer(stat_name, stat_value, *metric_type);
+            auto metric = ledger_->buffer(stat_name, stat_value, *metric_type);
+            metrics_vector[i].push_back(metric);
           }
           // skip rest of rules after a valid match
+          rule_found = true;
           break;
         }
       }
 
       // if no valid rule was found, guarantee we are not looking for a valid regex each
       // time
-      if (stat_map_.find(stat_name) == stat_map_.end())
+      if (!rule_found)
       {
-        stat_map_[stat_name] = MetricTypes();
         ::logger->warn(stat_name + " is not matched by any rule. Stat won't be logged");
       }
     }
@@ -238,10 +242,11 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
   {
     // process and flush ledger in separate thread
     flusher_guard_.reset(new ThreadGuard(std::thread(
-        &BackendContainer::processAndFlush, backend_container_, Ledger(*this->ledger_), 0)));
+        &BackendContainer::processAndFlush, backend_container_, std::move(this->ledger_), 0)));
 
     // delete previous ledger and create new one
     ledger_.reset(new Ledger());
+    topic_metrics_[topic_name].clear(); // Stats where pointing to deleted pointers
 
     flush_ledger_ = false;
   }
@@ -251,8 +256,6 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
   const std::string stat_name = "statsdcc." + topic_name + ".callback_processing_time";
   const double stat_value = (after - before).toSec();
   ledger_->buffer(stat_name, stat_value, "ms");
-  ::logger->warn(std::to_string(stat_value));
-  ROS_INFO_STREAM("Took " << ros::Time::now() - begin);
 }
 
 }  // namespace socket
