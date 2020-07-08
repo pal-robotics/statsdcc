@@ -166,6 +166,7 @@ void ROSServer::namesCallback(const pal_statistics_msgs::StatisticsNames::ConstP
 void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::ConstPtr &values,
                                const std::string &topic_name, int rules_index)
 {
+  auto begin = ros::Time::now();
   const auto &topic_stats_name = topics_stats_names_[topic_name];
   // discard if no names for this topic were received or versions differ
   if (topic_stats_name.first.empty() ||
@@ -250,6 +251,8 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
   const std::string stat_name = "statsdcc." + topic_name + ".callback_processing_time";
   const double stat_value = (after - before).toSec();
   ledger_->buffer(stat_name, stat_value, "ms");
+  ::logger->warn(std::to_string(stat_value));
+  ROS_INFO_STREAM("Took " << ros::Time::now() - begin);
 }
 
 }  // namespace socket
