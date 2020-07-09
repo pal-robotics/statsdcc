@@ -77,6 +77,10 @@ public:
 class Timer : public Metric
 {
 public:
+  Timer()
+  {
+    timer_data_.reserve(1000); // resizing this online consumes a significant amount of time
+  }
   void update(double metric_value, double sample_rate) override
   {
     counter_ += metric_value * (1 / sample_rate);

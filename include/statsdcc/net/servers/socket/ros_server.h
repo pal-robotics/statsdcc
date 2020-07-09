@@ -47,6 +47,7 @@ public:
   typedef std::pair<StatsNames, uint32_t> StatsNamesVersion;
   typedef std::unordered_map<std::string, StatsNamesVersion> TopicsStatsNames;
   typedef std::unordered_map<std::string, std::vector<Metrics>> TopicMetrics;
+  typedef std::unordered_map<std::string, std::shared_ptr<statsdcc::Metric>> TopicProcessingMetrics;
 
 public:
   /**
@@ -89,6 +90,7 @@ private:
   std::vector<Rules> topics_rules_;
   TopicsStatsNames topics_stats_names_;
   TopicMetrics topic_metrics_;
+  TopicProcessingMetrics topic_processing_metrics_;
 
   std::unique_ptr<Ledger> ledger_;
   bool flush_ledger_;

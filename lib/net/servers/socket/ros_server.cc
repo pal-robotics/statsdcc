@@ -187,24 +187,26 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
   /// @todo avoid copying the ledger, just switch pointers!
   auto &metrics_vector = topic_metrics_[topic_name];
   bool has_computed_metrics = !metrics_vector.empty();
-  if (!has_computed_metrics)
+  if (has_computed_metrics)
+  {
+    for (size_t i = 0; i < values->values.size(); ++i)
+    {
+      const double &stat_value = values->values[i];
+
+    for (auto metric = metrics_vector[i].begin(); metric != metrics_vector[i].end(); ++metric)
+    {
+      ledger_->buffer(*metric, stat_value);
+    }
+    }
+  }
+  else
   {
     metrics_vector.resize(values->values.size());
-  }
-  for (size_t i = 0; i < values->values.size(); ++i)
-  {
-    const std::string &stat_name = topic_stats_name.first[i];
-    const double stat_value = values->values[i];
+    for (size_t i = 0; i < values->values.size(); ++i)
+    {
+      const std::string &stat_name = topic_stats_name.first[i];
+      const double &stat_value = values->values[i];
 
-    if (has_computed_metrics)
-    {
-      for (auto metric = metrics_vector[i].begin(); metric != metrics_vector[i].end(); ++metric)
-      {
-        ledger_->buffer(*metric, stat_value);
-      }
-    }
-    else
-    {
       bool rule_found = false;
       for (auto rule = rules.begin(); rule != rules.end(); ++rule)
       {
@@ -219,7 +221,6 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
           for (auto metric_type = rule->second.begin(); metric_type != rule->second.end();
                ++metric_type)
           {
-
             auto metric = ledger_->buffer(stat_name, stat_value, *metric_type);
             metrics_vector[i].push_back(metric);
           }
@@ -255,7 +256,16 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
 
   const std::string stat_name = "statsdcc." + topic_name + ".callback_processing_time";
   const double stat_value = (after - before).toSec();
-  ledger_->buffer(stat_name, stat_value, "ms");
+  auto it = topic_processing_metrics_.find(topic_name);
+  if (it == topic_processing_metrics_.end())
+  {
+    topic_processing_metrics_[topic_name] = ledger_->buffer(stat_name, stat_value, "ms");
+  }
+  else
+  {
+    ledger_->buffer(it->second, stat_value);
+  }
+
 }
 
 }  // namespace socket

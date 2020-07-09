@@ -92,35 +92,47 @@ void Ledger::buffer(const std::string& metric) {
   }
 
   // ++this->frequency[metric_name];
-
-  switch (type) {
-    case MetricType::timer:
+  auto metric_it = metrics.find(metric_name);
+  if (metric_it != metrics.end())
+  {
+    buffer(metric_it->second, metric_value);
+  }
+  else
+  {
+    switch (type)
+    {
+      case MetricType::timer:
       {
-      auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Timer));
-      ret.first->second->update(metric_value, sample_rate);
-      break;
+        auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Timer));
+        ret.first->second->update(metric_value, sample_rate);
+        break;
       }
-    case MetricType::gauge:
+      case MetricType::gauge:
       {
         // check if +/- is specified
         char char_after_colon = metric_csty[metric.find_first_of(":") + 1];
-        if (('+' == char_after_colon) || ('-' == char_after_colon)) {
-          auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new IncrementalGauge));
+        if (('+' == char_after_colon) || ('-' == char_after_colon))
+        {
+          auto ret =
+              metrics.emplace(metric_name, std::shared_ptr<Metric>(new IncrementalGauge));
           ret.first->second->update(metric_value, sample_rate);
-        } else {
+        }
+        else
+        {
           auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Gauge));
           ret.first->second->update(metric_value, sample_rate);
         }
         break;
       }
-    case MetricType::set:
-      this->sets[metric_name].insert(metric_value_buffer);
-      break;
+      case MetricType::set:
+        this->sets[metric_name].insert(metric_value_buffer);
+        break;
 
-    default:
-      auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Counter));
-      ret.first->second->update(metric_value, sample_rate);
-      break;
+      default:
+        auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Counter));
+        ret.first->second->update(metric_value, sample_rate);
+        break;
+    }
   }
 }
 
@@ -172,30 +184,40 @@ std::shared_ptr<Metric> Ledger::buffer(const std::string &metric_name, double me
 
   // ++this->frequency[metric_name];
 
-
+  auto metric_it = metrics.find(metric_name);
+  if (metric_it != metrics.end())
+  {
+    buffer(metric_it->second, metric_value);
+    return metric_it->second;
+  }
+  else
+  {
   switch (type) {
     case MetricType::timer:
       {
-        auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Timer));
-        ret.first->second->update(metric_value, sample_rate);
-        return ret.first->second;
+        auto ptr = std::make_shared<Timer>();
+        metrics[metric_name] = ptr;
+        ptr->update(metric_value, sample_rate);
+        return ptr;
       }
     case MetricType::gauge:
       {
         /// @todo +/- is specified
-
-      auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Gauge));
-      ret.first->second->update(metric_value, sample_rate);
-      return ret.first->second;
+        auto ptr = std::make_shared<Gauge>();
+        metrics[metric_name] = ptr;
+        ptr->update(metric_value, sample_rate);
+        return ptr;
       }
     case MetricType::set:
       /// @todo sets
       return  nullptr;
 
     default:
-      auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Counter));
-      ret.first->second->update(metric_value, sample_rate);
-      return ret.first->second;
+      auto ptr = std::make_shared<Counter>();
+      metrics[metric_name] = ptr;
+      ptr->update(metric_value, sample_rate);
+      return ptr;
+  }
   }
 }
 
@@ -219,20 +241,20 @@ void Ledger::process() {
     {
     // process timers
     std::unordered_map<std::string, double> &current_timer_data = timer->timer_data_;
-    const std::string &key = m.first;
 
     if (key.length() <= 0) {
       current_timer_data["count"] = current_timer_data["count_ps"] = 0;
     } else {
       // get sorted values
       std::vector<double> values(timer->timers_);
-      std::sort(values.begin(), values.end());
+//      std::sort(values.begin(), values.end());
 
       // get count, sum, mean, min, and max
       int count = values.size();
-      double min = values.front();
-      double max = values.back();
       double sum = 0;
+      auto minmax = std::minmax_element(values.begin(), values.end());
+      double min = *minmax.first;
+      double max = *minmax.second;
       for (auto value_itr = values.cbegin();
           value_itr != values.cend();
           ++value_itr) {
@@ -300,8 +322,16 @@ void Ledger::setProcTime(std::int64_t value)
 void Ledger::addBadLine(const std::string &name)
 {
   // Only emplaces first time
-  auto ret = metrics.emplace(name, std::shared_ptr<Metric>(new Counter));
-  ret.first->second->update(1, 1);
+  auto metric_it = metrics.find(name);
+  if (metric_it != metrics.end())
+  {
+    metric_it->second->update(1, 1);
+  }
+  else
+  {
+    auto ret = metrics.emplace(name, std::shared_ptr<Metric>(new Counter));
+    ret.first->second->update(1, 1);
+  }
 }
 
 }  // namespace statsdcc
