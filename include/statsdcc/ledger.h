@@ -77,9 +77,14 @@ public:
 class Timer : public Metric
 {
 public:
-  Timer()
+  double counter_;
+  std::unordered_map<std::string, double> timer_data_;
+};
+class FullTimer : public Timer
+{
+public:
+  FullTimer()
   {
-    timer_data_.reserve(1000); // resizing this online consumes a significant amount of time
   }
   void update(double metric_value, double sample_rate) override
   {
@@ -87,9 +92,32 @@ public:
     timers_.push_back(metric_value);
   }
 
-  double counter_;
   std::vector<double> timers_;
-  std::unordered_map<std::string, double> timer_data_;
+};
+/**
+ * @brief The LeanTimer class Computes on the fly stats and doesn't store values, but you cannot compute percentiles from it
+ */
+class LeanTimer : public Timer
+{
+public:
+  LeanTimer()
+  {
+    min_ = std::numeric_limits<double>::infinity();
+    max_ = -std::numeric_limits<double>::infinity();
+  }
+  void update(double metric_value, double sample_rate) override
+  {
+    count_++;
+    counter_ += metric_value * (1 / sample_rate);
+    sum_ += metric_value;
+    min_ = std::min(min_, metric_value);
+    max_ = std::max(max_, metric_value);
+  }
+
+  size_t count_;
+  double sum_;
+  double min_;
+  double max_;
 };
 
 /**

@@ -103,8 +103,16 @@ void Ledger::buffer(const std::string& metric) {
     {
       case MetricType::timer:
       {
-        auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Timer));
-        ret.first->second->update(metric_value, sample_rate);
+        if (::config->percentiles.empty())
+        {
+          // This timer cannot be used to compute percecntiles, but has a much smaller memory footprint
+          auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new LeanTimer));
+          ret.first->second->update(metric_value, sample_rate);
+        }
+        else {
+          auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new FullTimer));
+          ret.first->second->update(metric_value, sample_rate);
+        }
         break;
       }
       case MetricType::gauge:
@@ -194,12 +202,21 @@ std::shared_ptr<Metric> Ledger::buffer(const std::string &metric_name, double me
   {
   switch (type) {
     case MetricType::timer:
+    {
+      std::shared_ptr<Metric> ptr;
+      if (::config->percentiles.empty())
       {
-        auto ptr = std::make_shared<Timer>();
-        metrics[metric_name] = ptr;
-        ptr->update(metric_value, sample_rate);
-        return ptr;
+        // This timer cannot be used to compute percecntiles, but has a much smaller memory footprint
+        ptr = std::make_shared<LeanTimer>();
       }
+      else
+      {
+        ptr = std::make_shared<FullTimer>();
+      }
+      metrics[metric_name] = ptr;
+      ptr->update(metric_value, sample_rate);
+      return ptr;
+    }
     case MetricType::gauge:
       {
         /// @todo +/- is specified
@@ -232,7 +249,8 @@ void Ledger::process() {
     const std::string &key = m.first;
     Metric* metric = m.second.get();
     Counter* counter = dynamic_cast<Counter*>(metric);
-    Timer* timer = dynamic_cast<Timer*>(metric);
+    FullTimer* timer = dynamic_cast<FullTimer*>(metric);
+    LeanTimer* lean_timer = dynamic_cast<LeanTimer*>(metric);
     if (counter)
     {
       counter->counter_rate_ = counter->counter_ / ::config->frequency;
@@ -307,8 +325,29 @@ void Ledger::process() {
       current_timer_data["mean"] = mean;
       timer->timer_data_ = current_timer_data;
     }
+    }
+    else if (lean_timer)
+    {
+      std::unordered_map<std::string, double> &current_timer_data = lean_timer->timer_data_;
+
+      if (key.length() <= 0)
+      {
+        current_timer_data["count"] = current_timer_data["count_ps"] = 0;
+      }
+      else
+      {
+        current_timer_data["upper"] = (!std::isinf(lean_timer->max_) ?
+                                           lean_timer->max_ :
+                                           std::numeric_limits<double>::quiet_NaN());
+        current_timer_data["lower"] = (!std::isinf(lean_timer->min_) ?
+                                         lean_timer->min_ :
+                                         std::numeric_limits<double>::quiet_NaN());
+        current_timer_data["count"] = lean_timer->counter_;
+        current_timer_data["mean"] = lean_timer->sum_ / double(lean_timer->count_);
+      }
+      lean_timer->timer_data_ = current_timer_data;
+    }
   }  // foreach metric
-}
   this->statsd_metrics["processing_time"] =
     chrono::unixtime_ms() - start_time;
 }
