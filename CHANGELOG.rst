@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.9 (2020-07-16)
+------------------
 * Merge branch 'perf-improve' into 'erbium-devel'
   Use only one map for timer metric to reduce hash find operations
   See merge request third-party/statsdcc!10
