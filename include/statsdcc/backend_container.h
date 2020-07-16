@@ -64,15 +64,16 @@ class BackendContainer {
    * @param ledger to be processed and flushed
    * @param fflusher_id id of the consumer that initiated the process and flush
    */
-  inline void processAndFlush(Ledger ledger, const int flusher_id) {
+
+  inline void processAndFlush(std::unique_ptr<Ledger> &&ledger_ptr, const int flusher_id) {
     std::lock_guard<std::mutex> lock(this->lmut);
-    ledger.process();
+    ledger_ptr->process();
     for (auto backend_itr = this->backends.cbegin();
         backend_itr != this->backends.cend();
         ++backend_itr) {
-      (*backend_itr)->flush_stats(ledger, flusher_id);
+      (*backend_itr)->flush_stats(*ledger_ptr, flusher_id);
     }
-  }
+}
 
   /**
    * flushes the given ledger to the backends
@@ -80,12 +81,12 @@ class BackendContainer {
    * @param ledger to be flushed
    * @param fflusher_id id of the consumer that initiated the flush
    */
-  inline void flush(const Ledger ledger, const int flusher_id) {
+  inline void flush(std::unique_ptr<Ledger> &&ledger_ptr, const int flusher_id) {
     std::lock_guard<std::mutex> lock(this->lmut);
     for (auto backend_itr = this->backends.cbegin();
         backend_itr != this->backends.cend();
         ++backend_itr) {
-      (*backend_itr)->flush_stats(ledger, flusher_id);
+      (*backend_itr)->flush_stats(*ledger_ptr, flusher_id);
     }
   }
 

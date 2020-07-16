@@ -59,17 +59,17 @@ void Worker::process() {
       // process and flush ledger
       this->current_ledger->process();
 
+      this->bad_lines_seen = this->current_ledger->bad_lines_seen();
+
+      this->set_metrics_frequency(this->current_ledger->frequency);
+
       // always pass the copy of the ledger to the flusher
       flusher_guard.reset(
         new ThreadGuard(
           std::thread(&BackendContainer::flush,
             this->backend_container,
-            Ledger(*this->current_ledger),
+            std::move(this->current_ledger),
             this->id)));
-
-      this->bad_lines_seen = this->current_ledger->bad_lines_seen();
-
-      this->set_metrics_frequency(this->current_ledger->frequency);
 
       // delete previous ledger and create new one
       this->current_ledger.reset(new Ledger());

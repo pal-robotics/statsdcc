@@ -72,90 +72,86 @@ void Carbon::flush_stats(const Ledger& ledger, int flusher_id) {
     fqdn_prefix = fqdn;
   }
 
-  // counters
-  for (auto counter_itr = ledger.counters.cbegin();
-      counter_itr != ledger.counters.cend();
-      ++counter_itr) {
-    std::string key = counter_itr->first;
-    std::string value =
-      std::to_string(static_cast<long double>(counter_itr->second));
+  for (const auto &m : ledger.metrics) {
+    std::string key = m.first;
+    Metric* metric = m.second.get();
+    Counter* counter = dynamic_cast<Counter*>(metric);
+    Timer* timer = dynamic_cast<Timer*>(metric);
+    Gauge* gauge = dynamic_cast<Gauge*>(metric);
 
-    std::string value_per_second =
-      std::to_string(static_cast<long double>(ledger.counter_rates.at(key)));
+    if (counter)
+    {
+      std::string value =
+        std::to_string(static_cast<long double>(counter->counter_));
 
-    // get the destination carbon hostport
-    Hostport n = this->hashring->get(key);
+      std::string value_per_second =
+        std::to_string(static_cast<long double>(counter->counter_rate_));
+      // get the destination carbon hostport
+      Hostport n = this->hashring->get(key);
 
-    std::string metric_name = this->prefix + fqdn_prefix;
-    if (this->use_metric_type_prefix) {
-      metric_name = metric_name + "counters.";
-    }
-    metric_name = metric_name + this->process_name(key);
+      std::string metric_name = this->prefix + fqdn_prefix;
+      if (this->use_metric_type_prefix) {
+        metric_name = metric_name + "counters.";
+      }
+      metric_name = metric_name + this->process_name(key);
 
-    stat_strings[n] +=
-      metric_name + ".rate"
-                  + " "
-                  + value_per_second
-                  + ts_suffix;
+      stat_strings[n] +=
+        metric_name + ".rate"
+                    + " "
+                    + value_per_second
+                    + ts_suffix;
 
-    stat_strings[n] +=
-      metric_name + ".count"
-                  + " "
-                  + value
-                  + ts_suffix;
-
-    ++num_stats;
-  }
-
-  // timers
-  for (auto timer_itr = ledger.timer_data.cbegin();
-      timer_itr != ledger.timer_data.cend();
-      ++timer_itr) {
-    std::string key = timer_itr->first;
-    std::string metric_name = this->prefix + fqdn_prefix;
-    if (this->use_metric_type_prefix) {
-      metric_name = metric_name + "timers.";
-    }
-    metric_name = metric_name + this->process_name(key);
-
-    for (auto timer_data_itr = timer_itr->second.cbegin();
-        timer_data_itr != timer_itr->second.cend();
-        ++timer_data_itr) {
-      std::string timer_data_key = timer_data_itr->first;
-
-      std::string value = std::to_string(
-        static_cast<long double>(timer_data_itr->second));
-
-      stat_strings[this->hashring->get(key)] +=
-        metric_name + '.'
-                    + timer_data_key
+      stat_strings[n] +=
+        metric_name + ".count"
                     + " "
                     + value
                     + ts_suffix;
+
+      ++num_stats;
     }
-    ++num_stats;
-  }
+    else if (timer)
+    {
+      std::string metric_name = this->prefix + fqdn_prefix;
+      if (this->use_metric_type_prefix) {
+        metric_name = metric_name + "timers.";
+      }
+      metric_name = metric_name + this->process_name(key);
 
-  // gauges
-  for (auto gauge_itr = ledger.gauges.cbegin();
-      gauge_itr != ledger.gauges.cend();
-      ++gauge_itr) {
-    std::string key = gauge_itr->first;
-    std::string metric_name = this->prefix + fqdn_prefix;
-    if (this->use_metric_type_prefix) {
-      metric_name = metric_name + "gauges.";
+      for (auto timer_data_itr = timer->timer_data_.cbegin();
+          timer_data_itr != timer->timer_data_.cend();
+          ++timer_data_itr) {
+        std::string timer_data_key = timer_data_itr->first;
+
+        std::string value = std::to_string(
+          static_cast<long double>(timer_data_itr->second));
+
+        stat_strings[this->hashring->get(key)] +=
+          metric_name + '.'
+                      + timer_data_key
+                      + " "
+                      + value
+                      + ts_suffix;
+      }
+      ++num_stats;
     }
-    metric_name = metric_name + this->process_name(key);
+    else if (gauge)
+    {
+      std::string metric_name = this->prefix + fqdn_prefix;
+      if (this->use_metric_type_prefix) {
+        metric_name = metric_name + "gauges.";
+      }
+      metric_name = metric_name + this->process_name(key);
 
-    std::string value = std::to_string(
-      static_cast<long double>(gauge_itr->second));
+      std::string value = std::to_string(
+        static_cast<long double>(gauge->gauge_));
 
-    stat_strings[this->hashring->get(key)] +=
-      metric_name + " "
-                  + value
-                  + ts_suffix;
+      stat_strings[this->hashring->get(key)] +=
+        metric_name + " "
+                    + value
+                    + ts_suffix;
 
-    ++num_stats;
+      ++num_stats;
+    }
   }
 
   // sets

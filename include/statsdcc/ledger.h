@@ -26,6 +26,100 @@ class Stdout;
 class Repeater;
 }
 
+class Metric
+{
+public:
+  virtual void update(double value, double sample_rate) = 0;
+};
+
+class Counter : public Metric
+{
+public:
+  Counter() : counter_(0.0), counter_rate_(0.0)
+  {
+  }
+  void update(double metric_value, double sample_rate) override
+  {
+    counter_ += metric_value * (1 / sample_rate);
+  }
+  double counter_;
+  double counter_rate_;  // was unused
+};
+
+class Set : public Metric
+{
+public:
+  void update(double metric_value, double sample_rate) override
+  {
+  }
+};
+
+class Gauge : public Metric
+{
+public:
+  void update(double metric_value, double /*sample_rate*/) override
+  {
+    gauge_ = metric_value;
+  }
+  double gauge_;
+};
+
+class IncrementalGauge : public Metric
+{
+public:
+  void update(double metric_value, double /*sample_rate*/) override
+  {
+    gauge_ += metric_value;
+  }
+  double gauge_;
+};
+
+class Timer : public Metric
+{
+public:
+  double counter_;
+  std::unordered_map<std::string, double> timer_data_;
+};
+class FullTimer : public Timer
+{
+public:
+  FullTimer()
+  {
+  }
+  void update(double metric_value, double sample_rate) override
+  {
+    counter_ += metric_value * (1 / sample_rate);
+    timers_.push_back(metric_value);
+  }
+
+  std::vector<double> timers_;
+};
+/**
+ * @brief The LeanTimer class Computes on the fly stats and doesn't store values, but you cannot compute percentiles from it
+ */
+class LeanTimer : public Timer
+{
+public:
+  LeanTimer()
+  {
+    min_ = std::numeric_limits<double>::infinity();
+    max_ = -std::numeric_limits<double>::infinity();
+  }
+  void update(double metric_value, double sample_rate) override
+  {
+    count_++;
+    counter_ += metric_value * (1 / sample_rate);
+    sum_ += metric_value;
+    min_ = std::min(min_, metric_value);
+    max_ = std::max(max_, metric_value);
+  }
+
+  size_t count_;
+  double sum_;
+  double min_;
+  double max_;
+};
+
 /**
  * Parses the metric submitted in one of the following format,
  * into std collections for easy processing
@@ -49,53 +143,8 @@ class Ledger {
 
  public:
   inline Ledger() {}
-
-  inline Ledger(const Ledger& ledger) :
-    counters(ledger.counters),
-    timers(ledger.timers),
-    timer_counters(ledger.timer_counters),
-    gauges(ledger.gauges),
-    sets(ledger.sets),
-    counter_rates(ledger.counter_rates),
-    timer_data(ledger.timer_data),
-    statsd_metrics(ledger.statsd_metrics) {
-  }
-
-  inline Ledger(const Ledger&& ledger) :
-    counters(std::move(ledger.counters)),
-    timers(std::move(ledger.timers)),
-    timer_counters(std::move(ledger.timer_counters)),
-    gauges(std::move(ledger.gauges)),
-    sets(std::move(ledger.sets)),
-    counter_rates(std::move(ledger.counter_rates)),
-    timer_data(std::move(ledger.timer_data)),
-    statsd_metrics(std::move(ledger.statsd_metrics)) {
-  }
-
-  inline Ledger& operator=(const Ledger& ledger) {
-    this->counters = ledger.counters;
-    this->timers = ledger.timers;
-    this->timer_counters = ledger.timer_counters;
-    this->gauges = ledger.gauges;
-    this->sets = ledger.sets;
-    this->counter_rates = ledger.counter_rates;
-    this->timer_data = ledger.timer_data;
-    this->statsd_metrics = ledger.statsd_metrics;
-    return *this;
-  }
-
-  inline Ledger& operator=(const Ledger&& ledger) {
-    this->counters = std::move(ledger.counters);
-    this->timers = std::move(ledger.timers);
-    this->timer_counters = std::move(ledger.timer_counters);
-    this->gauges = std::move(ledger.gauges);
-    this->sets = std::move(ledger.sets);
-    this->counter_rates = std::move(ledger.counter_rates);
-    this->timer_data = std::move(ledger.timer_data);
-    this->statsd_metrics = std::move(ledger.statsd_metrics);
-    return *this;
-  }
-
+  inline Ledger(const Ledger& ledger) = delete;
+  inline Ledger& operator=(const Ledger& ledger) = delete;
   ~Ledger() = default;
 
   /**
@@ -104,7 +153,8 @@ class Ledger {
    * @param metric The metric value to be buffered for processing later
    */
   void buffer(const std::string& metric);
-  void buffer(const std::string& metric_name, double metric_value, const std::string& metric_type);
+  std::shared_ptr<Metric> buffer(const std::string& metric_name, double metric_value, const std::string& metric_type);
+  void buffer(const std::shared_ptr<Metric> &metric, double metric_value);
 
   /**
    * Aggregates the metric values buffered by buffer method.
@@ -113,8 +163,8 @@ class Ledger {
 
   inline int bad_lines_seen() {
     auto bad_lines_key = ::config->name + ".bad_lines_seen";
-    return (this->counters.find(bad_lines_key) != this->counters.end())
-      ? static_cast<int>(this->counters[bad_lines_key])
+    return (this->metrics.find(bad_lines_key) != this->metrics.end())
+      ? static_cast<int>(dynamic_cast<Counter*>(this->metrics[bad_lines_key].get())->counter_)
       : 0;
   }
 
@@ -123,18 +173,16 @@ class Ledger {
   std::unordered_map<std::string, long long int> frequency;
 
  private:
-  std::unordered_map<std::string, double> counters;
-  std::unordered_map<std::string, std::vector<double> > timers;
-  std::unordered_map<std::string, double> timer_counters;
-  std::unordered_map<std::string, double> gauges;
+  struct TimerData
+  {
+    std::vector<double> timers;
+    double timer_counter;
+  };
+  void addBadLine(const std::string &name);
+
+
+  std::unordered_map<std::string, std::shared_ptr<Metric>> metrics;
   std::unordered_map<std::string, std::unordered_set<std::string> > sets;
-
-  std::unordered_map<std::string, double> counter_rates;
-
-  std::unordered_map<
-    std::string, std::unordered_map<std::string, double>
-  > timer_data;
-
   std::unordered_map<std::string, std::int64_t> statsd_metrics;
 };
 

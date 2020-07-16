@@ -87,40 +87,70 @@ void Ledger::buffer(const std::string& metric) {
     ::logger->info("Bad line: " + metric);
     // setup the names for the stats stored in counters
     std::string bad_lines_seen = ::config->name + ".bad_lines_seen";
-    ++this->counters[bad_lines_seen];
+    addBadLine(bad_lines_seen);
     return;
   }
 
   // ++this->frequency[metric_name];
-
-  switch (type) {
-    case MetricType::timer:
-      this->timer_counters[metric_name] += (1 / sample_rate);
-      this->timers[metric_name].push_back(metric_value);
-      break;
-
-    case MetricType::gauge:
+  auto metric_it = metrics.find(metric_name);
+  if (metric_it != metrics.end())
+  {
+    buffer(metric_it->second, metric_value);
+  }
+  else
+  {
+    switch (type)
+    {
+      case MetricType::timer:
       {
-        // check if +/- is specified
-        char char_after_colon = metric_csty[metric.find_first_of(":") + 1];
-        if (('+' == char_after_colon) || ('-' == char_after_colon)) {
-          this->gauges[metric_name] += metric_value;
-        } else {
-          this->gauges[metric_name] = metric_value;
+        if (::config->percentiles.empty())
+        {
+          // This timer cannot be used to compute percecntiles, but has a much smaller memory footprint
+          auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new LeanTimer));
+          ret.first->second->update(metric_value, sample_rate);
+        }
+        else {
+          auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new FullTimer));
+          ret.first->second->update(metric_value, sample_rate);
         }
         break;
       }
-    case MetricType::set:
-      this->sets[metric_name].insert(metric_value_buffer);
-      break;
+      case MetricType::gauge:
+      {
+        // check if +/- is specified
+        char char_after_colon = metric_csty[metric.find_first_of(":") + 1];
+        if (('+' == char_after_colon) || ('-' == char_after_colon))
+        {
+          auto ret =
+              metrics.emplace(metric_name, std::shared_ptr<Metric>(new IncrementalGauge));
+          ret.first->second->update(metric_value, sample_rate);
+        }
+        else
+        {
+          auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Gauge));
+          ret.first->second->update(metric_value, sample_rate);
+        }
+        break;
+      }
+      case MetricType::set:
+        this->sets[metric_name].insert(metric_value_buffer);
+        break;
 
-    default:
-      this->counters[metric_name] += metric_value * (1 / sample_rate);
-      break;
+      default:
+        auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Counter));
+        ret.first->second->update(metric_value, sample_rate);
+        break;
+    }
   }
 }
 
-void Ledger::buffer(const std::string &metric_name, double metric_value,
+void Ledger::buffer(const std::shared_ptr<Metric> &metric, double metric_value)
+{
+  double sample_rate = 1;
+  metric->update(metric_value, sample_rate);
+}
+
+std::shared_ptr<Metric> Ledger::buffer(const std::string &metric_name, double metric_value,
                     const std::string &metric_type)
 {
   MetricType type = MetricType::counter;
@@ -156,31 +186,55 @@ void Ledger::buffer(const std::string &metric_name, double metric_value,
     ::logger->info("Bad line: " + metric_name + "|" + metric_type);
     // setup the names for the stats stored in counters
     std::string bad_lines_seen = ::config->name + ".bad_lines_seen";
-    ++this->counters[bad_lines_seen];
-    return;
+    addBadLine(bad_lines_seen);
+    return nullptr;
   }
 
   // ++this->frequency[metric_name];
 
+  auto metric_it = metrics.find(metric_name);
+  if (metric_it != metrics.end())
+  {
+    buffer(metric_it->second, metric_value);
+    return metric_it->second;
+  }
+  else
+  {
   switch (type) {
     case MetricType::timer:
-      this->timer_counters[metric_name] += (1 / sample_rate);
-      this->timers[metric_name].push_back(metric_value);
-      break;
-
+    {
+      std::shared_ptr<Metric> ptr;
+      if (::config->percentiles.empty())
+      {
+        // This timer cannot be used to compute percecntiles, but has a much smaller memory footprint
+        ptr = std::make_shared<LeanTimer>();
+      }
+      else
+      {
+        ptr = std::make_shared<FullTimer>();
+      }
+      metrics[metric_name] = ptr;
+      ptr->update(metric_value, sample_rate);
+      return ptr;
+    }
     case MetricType::gauge:
       {
         /// @todo +/- is specified
-        this->gauges[metric_name] = metric_value;
-        break;
+        auto ptr = std::make_shared<Gauge>();
+        metrics[metric_name] = ptr;
+        ptr->update(metric_value, sample_rate);
+        return ptr;
       }
     case MetricType::set:
       /// @todo sets
-      break;
+      return  nullptr;
 
     default:
-      this->counters[metric_name] += metric_value * (1 / sample_rate);
-      break;
+      auto ptr = std::make_shared<Counter>();
+      metrics[metric_name] = ptr;
+      ptr->update(metric_value, sample_rate);
+      return ptr;
+  }
   }
 }
 
@@ -190,32 +244,35 @@ void Ledger::process() {
 
   // process counters
   // calculate "per second" rate
-  for (auto counter_itr = this->counters.cbegin();
-      counter_itr != this->counters.cend();
-      ++counter_itr) {
-    this->counter_rates[counter_itr->first] =
-      counter_itr->second / ::config->frequency;
-  }
 
-  // process timers
-  for (auto timer_key_value_pair_itr = this->timers.cbegin();
-      timer_key_value_pair_itr != this->timers.cend();
-      ++timer_key_value_pair_itr) {
-    std::unordered_map<std::string, double> current_timer_data;
-    std::string key = timer_key_value_pair_itr->first;
+  for (auto &m : this->metrics) {
+    const std::string &key = m.first;
+    Metric* metric = m.second.get();
+    Counter* counter = dynamic_cast<Counter*>(metric);
+    FullTimer* timer = dynamic_cast<FullTimer*>(metric);
+    LeanTimer* lean_timer = dynamic_cast<LeanTimer*>(metric);
+    if (counter)
+    {
+      counter->counter_rate_ = counter->counter_ / ::config->frequency;
+    }
+    else if (timer)
+    {
+    // process timers
+    std::unordered_map<std::string, double> &current_timer_data = timer->timer_data_;
 
     if (key.length() <= 0) {
       current_timer_data["count"] = current_timer_data["count_ps"] = 0;
     } else {
       // get sorted values
-      std::vector<double> values(timer_key_value_pair_itr->second);
-      std::sort(values.begin(), values.end());
+      std::vector<double> values(timer->timers_);
+//      std::sort(values.begin(), values.end());
 
       // get count, sum, mean, min, and max
       int count = values.size();
-      double min = values.front();
-      double max = values.back();
       double sum = 0;
+      auto minmax = std::minmax_element(values.begin(), values.end());
+      double min = *minmax.first;
+      double max = *minmax.second;
       for (auto value_itr = values.cbegin();
           value_itr != values.cend();
           ++value_itr) {
@@ -264,13 +321,33 @@ void Ledger::process() {
 
       current_timer_data["upper"] = max;
       current_timer_data["lower"] = min;
-      current_timer_data["count"] = this->timer_counters[key];
+      current_timer_data["count"] = timer->counter_;
       current_timer_data["mean"] = mean;
+      timer->timer_data_ = current_timer_data;
     }
+    }
+    else if (lean_timer)
+    {
+      std::unordered_map<std::string, double> &current_timer_data = lean_timer->timer_data_;
 
-    this->timer_data[key] = current_timer_data;
+      if (key.length() <= 0)
+      {
+        current_timer_data["count"] = current_timer_data["count_ps"] = 0;
+      }
+      else
+      {
+        current_timer_data["upper"] = (!std::isinf(lean_timer->max_) ?
+                                           lean_timer->max_ :
+                                           std::numeric_limits<double>::quiet_NaN());
+        current_timer_data["lower"] = (!std::isinf(lean_timer->min_) ?
+                                         lean_timer->min_ :
+                                         std::numeric_limits<double>::quiet_NaN());
+        current_timer_data["count"] = lean_timer->counter_;
+        current_timer_data["mean"] = lean_timer->sum_ / double(lean_timer->count_);
+      }
+      lean_timer->timer_data_ = current_timer_data;
+    }
   }  // foreach metric
-
   this->statsd_metrics["processing_time"] =
     chrono::unixtime_ms() - start_time;
 }
@@ -279,6 +356,21 @@ void Ledger::setProcTime(std::int64_t value)
 {
   this->statsd_metrics["metrics_processing_time"] =
       this->statsd_metrics["metrics_processing_time"] + value;
+}
+
+void Ledger::addBadLine(const std::string &name)
+{
+  // Only emplaces first time
+  auto metric_it = metrics.find(name);
+  if (metric_it != metrics.end())
+  {
+    metric_it->second->update(1, 1);
+  }
+  else
+  {
+    auto ret = metrics.emplace(name, std::shared_ptr<Metric>(new Counter));
+    ret.first->second->update(1, 1);
+  }
 }
 
 }  // namespace statsdcc
