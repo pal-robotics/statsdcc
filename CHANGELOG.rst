@@ -2,6 +2,19 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'perf-improve' into 'erbium-devel'
+  Use only one map for timer metric to reduce hash find operations
+  See merge request third-party/statsdcc!10
+* Optimize Timer to avoid storing all recorded values
+  In our use case, reduces memory footprint to 2% of the original
+* Further improvements, but with memory leak
+* Performance overhaul, use pal_statistics ordering to avoid map lookups
+* Add time
+* Use only one map for timer metric to reduce hash find operations
+* Contributors: Victor Lopez, victor
+
 0.0.8 (2019-11-07)
 ------------------
 * Merge branch 'rename_net' into 'erbium-devel'
