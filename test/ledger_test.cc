@@ -79,20 +79,49 @@ class LedgerTest: public ::testing::Test {
     ledger.buffer("timer_data:10|ms");
 
     ledger.process();
-
-    this->counters = ledger.counters;
-    this->timers = ledger.timers;
-    this->timer_counters = ledger.timer_counters;
-    this->gauges = ledger.gauges;
-    this->sets = ledger.sets;
-
-    this->counter_rates = ledger.counter_rates;
-    this->timer_data = ledger.timer_data;
   }
 
   virtual void TearDown() {
     ::config.reset();
   }
+
+  double getCounter(const std::string &name)
+  {
+    auto &metric = ledger.metrics[name];
+    Counter* counter = dynamic_cast<Counter*>(metric.get());
+    return counter->counter_;
+  }
+  double getCounterRate(const std::string &name)
+  {
+    auto &metric = ledger.metrics[name];
+    Counter* counter = dynamic_cast<Counter*>(metric.get());
+    return counter->counter_rate_;
+  }
+  std::vector<double> getTimer(const std::string &name)
+  {
+    auto &metric = ledger.metrics[name];
+    FullTimer* timer = dynamic_cast<FullTimer*>(metric.get());
+    return timer->timers_;
+  }
+  std::unordered_map<std::string, double> getTimerData(const std::string &name)
+  {
+    auto &metric = ledger.metrics[name];
+    FullTimer* timer = dynamic_cast<FullTimer*>(metric.get());
+    return timer->timer_data_;
+  }
+  double getTimerCounter(const std::string &name)
+  {
+    auto &metric = ledger.metrics[name];
+    FullTimer* timer = dynamic_cast<FullTimer*>(metric.get());
+    return timer->counter_;
+  }
+  double getGauge(const std::string &name)
+  {
+    auto &metric = ledger.metrics[name];
+    Gauge* gauge = dynamic_cast<Gauge*>(metric.get());
+    return gauge->gauge_;
+  }
+
 
   Ledger ledger;
 
@@ -111,38 +140,38 @@ class LedgerTest: public ::testing::Test {
 };
 
 TEST_F(LedgerTest, simple_counter) {
-  EXPECT_EQ(1, counters["counter"]);
+  EXPECT_EQ(1, getCounter("counter"));
 }
 
 TEST_F(LedgerTest, counter_with_sampling) {
-  EXPECT_EQ(10, counters["counter_with_sampling"]);
+  EXPECT_EQ(10, getCounter("counter_with_sampling"));
 }
 
 TEST_F(LedgerTest, increment_counter) {
-  EXPECT_EQ(5, counters["increment_counter"]);
+  EXPECT_EQ(5, getCounter("increment_counter"));
 }
 
 TEST_F(LedgerTest, increment_counter_with_sampling) {
-  EXPECT_EQ(14, counters["increment_counter_with_sampling"]);
+  EXPECT_EQ(14, getCounter("increment_counter_with_sampling"));
 }
 
 TEST_F(LedgerTest, simple_timer) {
-  EXPECT_EQ(320, timers["timer"][0]);
-  EXPECT_EQ(320, timers["timer"][1]);
-  EXPECT_EQ(36.56, timers["timer"][2]);
+  EXPECT_EQ(320, getTimer("timer")[0]);
+  EXPECT_EQ(320, getTimer("timer")[1]);
+  EXPECT_EQ(36.56, getTimer("timer")[2]);
 }
 
 TEST_F(LedgerTest, timer_with_sampling) {
-  EXPECT_EQ(32.5, timers["timer_with_sampling"][0]);
-  EXPECT_EQ(14, timer_counters["timer_with_sampling"]);
+  EXPECT_EQ(32.5, getTimer("timer_with_sampling")[0]);
+  EXPECT_EQ(14, getTimerCounter("timer_with_sampling"));
 }
 
 TEST_F(LedgerTest, simple_gauge) {
-  EXPECT_EQ(333, gauges["gauge"]);
+  EXPECT_EQ(333, getGauge("gauge"));
 }
 
 TEST_F(LedgerTest, math_gauge) {
-  EXPECT_EQ(399.5, gauges["math"]);
+  EXPECT_EQ(399.5, getGauge("math"));
 }
 
 TEST_F(LedgerTest, sets) {
@@ -153,22 +182,22 @@ TEST_F(LedgerTest, sets) {
 }
 
 TEST_F(LedgerTest, bad_lines) {
-  EXPECT_EQ(6, counters[config->name + ".bad_lines_seen"]);
+  EXPECT_EQ(6, getCounter(config->name + ".bad_lines_seen"));
 }
 
 TEST_F(LedgerTest, counter_rate) {
-  EXPECT_EQ(1000, counter_rates["counter_rate"]);
+  EXPECT_EQ(1000, getCounterRate("counter_rate"));
 }
 
 TEST_F(LedgerTest, timer_data) {
-  EXPECT_EQ(10, timer_data["timer_data"]["upper"]);
-  EXPECT_EQ(1, timer_data["timer_data"]["lower"]);
-  EXPECT_EQ(10, timer_data["timer_data"]["count"]);
-  EXPECT_EQ(5.5, timer_data["timer_data"]["mean"]);
-  EXPECT_EQ(9, timer_data["timer_data"]["upper_90"]);
-  EXPECT_EQ(9, timer_data["timer_data"]["count_90"]);
-  EXPECT_EQ(45, timer_data["timer_data"]["sum_90"]);
-  EXPECT_EQ(5, timer_data["timer_data"]["mean_90"]);
+  EXPECT_EQ(10, getTimerData("timer_data")["upper"]);
+  EXPECT_EQ(1, getTimerData("timer_data")["lower"]);
+  EXPECT_EQ(10, getTimerData("timer_data")["count"]);
+  EXPECT_EQ(5.5, getTimerData("timer_data")["mean"]);
+  EXPECT_EQ(9, getTimerData("timer_data")["upper_90"]);
+  EXPECT_EQ(9, getTimerData("timer_data")["count_90"]);
+  EXPECT_EQ(45, getTimerData("timer_data")["sum_90"]);
+  EXPECT_EQ(5, getTimerData("timer_data")["mean_90"]);
 }
 
 }  // namespace statsdcc
