@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.10 (2020-07-17)
+-------------------
 * Fix tests
 * Contributors: Victor Lopez
 
