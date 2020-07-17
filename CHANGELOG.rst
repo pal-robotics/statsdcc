@@ -2,6 +2,11 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix tests
+* Contributors: Victor Lopez
+
 0.0.9 (2020-07-16)
 ------------------
 * Merge branch 'perf-improve' into 'erbium-devel'
