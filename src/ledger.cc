@@ -95,7 +95,24 @@ void Ledger::buffer(const std::string& metric) {
   auto metric_it = metrics.find(metric_name);
   if (metric_it != metrics.end())
   {
-    buffer(metric_it->second, metric_value);
+    if (type == MetricType::gauge)
+    {
+      Gauge *gauge = dynamic_cast<Gauge *>(metric_it->second.get());
+      // check if +/- is specified
+      char char_after_colon = metric_csty[metric.find_first_of(":") + 1];
+      if (('+' == char_after_colon) || ('-' == char_after_colon))
+      {
+        gauge->incrementalUpdate(metric_value, sample_rate);
+      }
+      else
+      {
+        gauge->update(metric_value, sample_rate);
+      }
+    }
+    else
+    {
+      buffer(metric_it->second, metric_value, sample_rate);
+    }
   }
   else
   {
@@ -117,19 +134,8 @@ void Ledger::buffer(const std::string& metric) {
       }
       case MetricType::gauge:
       {
-        // check if +/- is specified
-        char char_after_colon = metric_csty[metric.find_first_of(":") + 1];
-        if (('+' == char_after_colon) || ('-' == char_after_colon))
-        {
-          auto ret =
-              metrics.emplace(metric_name, std::shared_ptr<Metric>(new IncrementalGauge));
-          ret.first->second->update(metric_value, sample_rate);
-        }
-        else
-        {
-          auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Gauge));
-          ret.first->second->update(metric_value, sample_rate);
-        }
+        auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Gauge));
+        ret.first->second->update(metric_value, sample_rate);
         break;
       }
       case MetricType::set:
@@ -144,9 +150,8 @@ void Ledger::buffer(const std::string& metric) {
   }
 }
 
-void Ledger::buffer(const std::shared_ptr<Metric> &metric, double metric_value)
+void Ledger::buffer(const std::shared_ptr<Metric> &metric, double metric_value, double sample_rate)
 {
-  double sample_rate = 1;
   metric->update(metric_value, sample_rate);
 }
 

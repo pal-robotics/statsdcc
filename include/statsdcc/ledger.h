@@ -57,17 +57,14 @@ public:
 class Gauge : public Metric
 {
 public:
+  Gauge()
+    : gauge_(0)
+  {}
   void update(double metric_value, double /*sample_rate*/) override
   {
     gauge_ = metric_value;
   }
-  double gauge_;
-};
-
-class IncrementalGauge : public Metric
-{
-public:
-  void update(double metric_value, double /*sample_rate*/) override
+  void incrementalUpdate(double metric_value, double /*sample_rate*/)
   {
     gauge_ += metric_value;
   }
@@ -77,6 +74,10 @@ public:
 class Timer : public Metric
 {
 public:
+  Timer()
+    : counter_(0.0)
+  {
+  }
   double counter_;
   std::unordered_map<std::string, double> timer_data_;
 };
@@ -88,7 +89,7 @@ public:
   }
   void update(double metric_value, double sample_rate) override
   {
-    counter_ += metric_value * (1 / sample_rate);
+    counter_ += (1 / sample_rate);
     timers_.push_back(metric_value);
   }
 
@@ -104,6 +105,8 @@ public:
   {
     min_ = std::numeric_limits<double>::infinity();
     max_ = -std::numeric_limits<double>::infinity();
+    count_ = 0;
+    sum_ = 0.0;
   }
   void update(double metric_value, double sample_rate) override
   {
@@ -154,7 +157,7 @@ class Ledger {
    */
   void buffer(const std::string& metric);
   std::shared_ptr<Metric> buffer(const std::string& metric_name, double metric_value, const std::string& metric_type);
-  void buffer(const std::shared_ptr<Metric> &metric, double metric_value);
+  void buffer(const std::shared_ptr<Metric> &metric, double metric_value, double sample_rate = 1.0);
 
   /**
    * Aggregates the metric values buffered by buffer method.
