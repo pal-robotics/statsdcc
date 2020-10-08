@@ -247,7 +247,7 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
 
     // delete previous ledger and create new one
     ledger_.reset(new Ledger());
-    topic_metrics_[topic_name].clear(); // Stats where pointing to deleted pointers
+    topic_metrics_.clear(); // Stats where pointing to deleted pointers
 
     flush_ledger_ = false;
   }

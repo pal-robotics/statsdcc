@@ -347,7 +347,7 @@ void Ledger::process() {
         current_timer_data["lower"] = (!std::isinf(lean_timer->min_) ?
                                          lean_timer->min_ :
                                          std::numeric_limits<double>::quiet_NaN());
-        current_timer_data["count"] = lean_timer->counter_;
+        current_timer_data["count"] = lean_timer->count_;
         current_timer_data["mean"] = lean_timer->sum_ / double(lean_timer->count_);
       }
       lean_timer->timer_data_ = current_timer_data;
