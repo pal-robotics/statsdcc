@@ -74,6 +74,7 @@ void Ledger::buffer(const std::string& metric) {
     }
   } else if (metric_type_str.find("s") == 0) {
     type = MetricType::set;
+    metric_value = boost::lexical_cast<double>(metric_value_buffer);
     bad_line = false;
   } else {
     try {
@@ -139,9 +140,11 @@ void Ledger::buffer(const std::string& metric) {
         break;
       }
       case MetricType::set:
-        this->sets[metric_name].insert(metric_value_buffer);
+      {
+        auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Set));
+        ret.first->second->update(metric_value, sample_rate);
         break;
-
+      }
       default:
         auto ret = metrics.emplace(metric_name, std::shared_ptr<Metric>(new Counter));
         ret.first->second->update(metric_value, sample_rate);
@@ -231,9 +234,13 @@ std::shared_ptr<Metric> Ledger::buffer(const std::string &metric_name, double me
         return ptr;
       }
     case MetricType::set:
+    {
       /// @todo sets
-      return  nullptr;
-
+      auto ptr = std::make_shared<Set>();
+      metrics[metric_name] = ptr;
+      ptr->update(metric_value, sample_rate);
+      return  ptr;
+    }
     default:
       auto ptr = std::make_shared<Counter>();
       metrics[metric_name] = ptr;

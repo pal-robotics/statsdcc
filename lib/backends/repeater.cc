@@ -57,6 +57,7 @@ void Repeater::flush_stats(const Ledger& ledger, int flusher_id) {
     Counter* counter = dynamic_cast<Counter*>(metric);
     Timer* timer = dynamic_cast<Timer*>(metric);
     Gauge* gauge = dynamic_cast<Gauge*>(metric);
+    Set* set = dynamic_cast<Set*>(metric);
 
     if (counter)
     {
@@ -94,18 +95,13 @@ void Repeater::flush_stats(const Ledger& ledger, int flusher_id) {
 
       this->send(key + ":" + value + "|g");
     }
-  }
+    else if (set) {
+      std::string value = std::to_string(
+        static_cast<long double>(set->set_.size()));
 
-  // sets
-  for (auto set_itr = ledger.sets.cbegin();
-      set_itr != ledger.sets.cend();
-      ++set_itr) {
-    std::string key = set_itr->first;
-    auto value = set_itr->second;
-
-    this->send(key + ".count:" +
-           std::to_string(static_cast<long long int>(value.size())) + "|s");
-
+      this->send(key + ".count:" + value + "|s");
+      ;
+    }
   }
 }
 

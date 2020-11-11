@@ -78,6 +78,7 @@ void Carbon::flush_stats(const Ledger& ledger, int flusher_id) {
     Counter* counter = dynamic_cast<Counter*>(metric);
     Timer* timer = dynamic_cast<Timer*>(metric);
     Gauge* gauge = dynamic_cast<Gauge*>(metric);
+    Set* set = dynamic_cast<Set*>(metric);
 
     if (counter)
     {
@@ -152,26 +153,24 @@ void Carbon::flush_stats(const Ledger& ledger, int flusher_id) {
 
       ++num_stats;
     }
-  }
+    else if (set) {
+      std::string metric_name = this->prefix + fqdn_prefix;
+      if (this->use_metric_type_prefix) {
+        metric_name = metric_name + "sets.";
+      }
+      metric_name = metric_name + this->process_name(key);
 
-  // sets
-  for (auto set_itr = ledger.sets.cbegin();
-      set_itr != ledger.sets.cend();
-      ++set_itr) {
-    std::string key = set_itr->first;
-    auto value = set_itr->second;
-    std::string metric_name = this->prefix + fqdn_prefix;
-    if (this->use_metric_type_prefix) {
-      metric_name = metric_name + "sets.";
+      std::string value = std::to_string(
+        static_cast<long double>(set->set_.size()));
+
+      stat_strings[this->hashring->get(key)] +=
+        metric_name + ".count"
+                    + " "
+                    + value
+                    + ts_suffix;
+
+      ++num_stats;
     }
-    metric_name = metric_name + this->process_name(key);
-
-    stat_strings[this->hashring->get(key)] +=
-      metric_name + ".count"
-                  + " "
-                  + std::to_string(static_cast<long long int>(value.size()))
-                  + ts_suffix;
-     ++num_stats;
   }
 
   // stats

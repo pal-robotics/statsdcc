@@ -53,7 +53,7 @@ class LedgerTest: public ::testing::Test {
     ledger.buffer("uniques:765|s");
     ledger.buffer("uniques:765|s");
     ledger.buffer("uniques:900|s");
-    ledger.buffer("uniques:setval|s");
+    ledger.buffer("uniques:123|s");
     ledger.buffer("setval:44.07|s");
 
     // bad lines
@@ -121,6 +121,13 @@ class LedgerTest: public ::testing::Test {
     Gauge* gauge = dynamic_cast<Gauge*>(metric.get());
     return gauge->gauge_;
   }
+  size_t getSet(const std::string &name)
+  {
+    auto &metric = ledger.metrics[name];
+    Set* set = dynamic_cast<Set*>(metric.get());
+    return set->set_.size();
+  }
+
 
 
   Ledger ledger;
@@ -175,10 +182,8 @@ TEST_F(LedgerTest, math_gauge) {
 }
 
 TEST_F(LedgerTest, sets) {
-//  EXPECT_EQ(1, sets["uniques"].count("765"));
-//  EXPECT_EQ(1, sets["uniques"].count("900"));
-//  EXPECT_EQ(1, sets["uniques"].count("setval"));
-//  EXPECT_EQ(1, sets["setval"].count("44.07"));
+  EXPECT_EQ(3, getSet("uniques"));
+  EXPECT_EQ(1, getSet("setval"));
 }
 
 TEST_F(LedgerTest, bad_lines) {

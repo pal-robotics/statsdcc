@@ -34,6 +34,7 @@ void Stdout::flush_stats(const Ledger& ledger, int flusher_id) {
     Counter* counter = dynamic_cast<Counter*>(metric);
     Timer* timer = dynamic_cast<Timer*>(metric);
     Gauge* gauge = dynamic_cast<Gauge*>(metric);
+    Set* set = dynamic_cast<Set*>(metric);
     if (counter)
     {
       std::string value =
@@ -69,20 +70,14 @@ void Stdout::flush_stats(const Ledger& ledger, int flusher_id) {
 
       ++num_stats;
     }
-  }
+    else if (set) {
+      std::string value = std::to_string(
+        static_cast<long double>(set->set_.size()));
 
-  // sets
-  for (auto set_itr = ledger.sets.cbegin();
-      set_itr != ledger.sets.cend();
-      ++set_itr) {
-    std::string key = set_itr->first;
-    auto value = set_itr->second;
+      out += key + ".count " + value + ts_suffix;
 
-    out += key + ".count " +
-           std::to_string(static_cast<long long int>(value.size())) +
-           ts_suffix;
-
-     ++num_stats;
+      ++num_stats;
+    }
   }
 
   // stats

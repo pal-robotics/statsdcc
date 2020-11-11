@@ -7,6 +7,7 @@
 #define INCLUDE_STATSDCC_LEDGER_H_
 
 #include <cstdint>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -51,7 +52,9 @@ class Set : public Metric
 public:
   void update(double metric_value, double sample_rate) override
   {
+    set_.insert(metric_value);
   }
+  std::set<double> set_;
 };
 
 class Gauge : public Metric
@@ -185,7 +188,6 @@ class Ledger {
 
 
   std::unordered_map<std::string, std::shared_ptr<Metric>> metrics;
-  std::unordered_map<std::string, std::unordered_set<std::string> > sets;
   std::unordered_map<std::string, std::int64_t> statsd_metrics;
 };
 
