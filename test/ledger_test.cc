@@ -132,13 +132,6 @@ class LedgerTest: public ::testing::Test {
 
   Ledger ledger;
 
-  // copies of Ledger instance variables
-  std::unordered_map<std::string, double> counters;
-  std::unordered_map<std::string, std::vector<double> > timers;
-  std::unordered_map<std::string, double> timer_counters;
-  std::unordered_map<std::string, double> gauges;
-  std::unordered_map<std::string, std::unordered_set<std::string> > sets;
-
   std::unordered_map<std::string, double> counter_rates;
 
   std::unordered_map<
