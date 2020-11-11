@@ -14,7 +14,7 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <build_depend>boost</build_depend>
-  <build_depend>libgoogle-perftools-dev</build_depend>
+  <build_depend>gperftools</build_depend>
   <build_depend>libjsoncpp-dev</build_depend>
   <build_depend>libmicrohttpd-dev</build_depend>
   <build_depend>libssl-dev</build_depend>
