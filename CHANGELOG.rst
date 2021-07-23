@@ -2,6 +2,18 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'boost_regex' into 'erbium-devel'
+  Use catkin to find boost libraries instead
+  See merge request third-party/statsdcc!12
+* Use catkin to find boost libraries instead
+* Fix libmicrohttpd-dev dependency
+* Fix gperftools dependency name
+* Cleanup test
+* Add support for sets
+* Contributors: Jordan Palacios, Victor Lopez
+
 0.0.12 (2020-10-08)
 -------------------
 * Fix missing stats
