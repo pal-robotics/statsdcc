@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>statsdcc</name>
-  <version>0.0.12</version>
+  <version>0.0.13</version>
   <description>High performance multi-threaded network daemon written in C++
   that aggregates stats and sends aggregates to backends</description>
 

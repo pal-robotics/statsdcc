@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.13 (2021-07-23)
+-------------------
 * Merge branch 'boost_regex' into 'erbium-devel'
   Use catkin to find boost libraries instead
   See merge request third-party/statsdcc!12
