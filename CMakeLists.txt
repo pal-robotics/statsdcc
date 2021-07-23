@@ -9,6 +9,8 @@ find_package(catkin REQUIRED
         roscpp
 )
 
+find_package(Boost REQUIRED regex)
+
 catkin_package()
 
 include(CheckIncludeFileCXX)
@@ -61,6 +63,7 @@ add_definitions (-D_GLIBCXX_USE_SCHED_YIELD)
 
 include_directories (
    include
+   ${Boost_INCLUDE_DIRS}
    ${CATKIN_DEVEL_PREFIX}/include
    build/include
    # vendor/gtest-1.7.0/include
@@ -95,11 +98,6 @@ endif()
 find_library (JSONCPP NAMES libjsoncpp.a jsoncpp)
 if (NOT JSONCPP)
   lib_not_found("libjsoncpp.a")
-endif()
-
-find_library (BOOST_REGEX NAMES libboost_regex.a boost_regex)
-if (NOT BOOST_REGEX)
-  lib_not_found("libboost_regex.a")
 endif()
 
 find_library (TCMALLOC_MINIMAL NAMES libtcmalloc_minimal.a tcmalloc_minimal)
