@@ -28,7 +28,7 @@ target_link_libraries (statsdcc
   logger
   ${CRYPTO}
   ${JSONCPP}
-  ${BOOST_REGEX}
+  ${Boost_LIBRARIES}
   ${TCMALLOC_MINIMAL}
   ${MICROHTTPD}
   ${catkin_LIBRARIES}
@@ -49,7 +49,7 @@ target_link_libraries (proxy
   config
   logger
   ${JSONCPP}
-  ${BOOST_REGEX}
+  ${Boost_LIBRARIES}
   ${TCMALLOC_MINIMAL}
   ${MICROHTTPD}
   pthread
