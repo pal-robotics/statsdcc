@@ -41,7 +41,7 @@ To run aggregator
 - - -
 Example configuration files are in [statsdcc/etc](Logger)
 
-### Commmon Configuration Variables
+### Common Configuration Variables
 
 - 	`servers`: A list of server threads 
 
@@ -127,14 +127,14 @@ Example configuration files are in [statsdcc/etc](Logger)
 		]
 		```
 		
-		-	shard: Key for this node used while building HashRing for consistent hasing.
+		-	shard: Key for this node used while building HashRing for consistent hashing.
 				
 		-	host: Hostname for carbon instance. If not specified defaults to "127.0.0.1".
 				
-		-	port: Tcp port number on which the carbon instance is listeningfor metrics. If not specified defaults to 3000.
+		-	port: Tcp port number on which the carbon instance is listening for metrics. If not specified defaults to 3000.
 				
 		-	vnodes: The amount of virtual nodes per server. 
-					Used for consistent hasing. 
+					Used for consistent hashing. 
 					Larger number gives bigger distribution in the HashRing. 
 					If not specified defaults to 1000.
 					
@@ -154,7 +154,7 @@ Example configuration files are in [statsdcc/etc](Logger)
 
 ### Proxy Configuration Variables
 
--	`backends`:	List of backends to send metrics to, atleast one of the following backends should be set. 
+-	`backends`:	List of backends to send metrics to, at least one of the following backends should be set. 
 	
 	-	`stdout`: Set to true to dump aggregations to stdout.
 	
