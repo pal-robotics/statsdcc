@@ -73,6 +73,15 @@ Example configuration files are in [statsdcc/etc](Logger)
 			"port": 8000
 		}
 		```
+	
+	-	`ros`: This server subscribes to topics with message type `pal_statistics_msgs/Statistics`. For more information on how to publish such topics see the [PAL Statistics Framework
+](https://gitlab/qa/pal_statistics). The topics' configuration needs to be setup on the ROS parameter server. Check the [Proxy Configuration Variables](#proxy-configuration-variables) section.
+
+		```
+		"ros": {
+            "node_name": "statsdcc"
+        },
+		```
 			
 -	`workers`: Number of worker threads to compute aggregations. If not specified defaults to 1.
 	
@@ -163,6 +172,32 @@ Example configuration files are in [statsdcc/etc](Logger)
 		}
 	]
 	```
+
+### ROS Server Topics' Configuration
+
+A `topics` parameter needs to be set under the `ros` server node namespace. `topics` must contain a list of topics names with a set of rules to indicate which stats should be aggregated.
+
+Here is an example extracted from the standard `pal_statsdcc_cfg` [topics configuration file](https://gitlab/qa/pal_statistics_cfg/-/blob/master/pal_statsdcc_cfg/config/topics.yaml). Check the rest of the package to get an idea on how the `statsdcc` is normally launched in the robot.
+
+```yaml
+topics:
+    - name: '/motors_statistics'
+      stats:
+          - name: 'motors.*.mode'
+            type: ['g']
+          - name: 'motors.*.(current|velocity|position|torque|abs_position|drive_temperature|motor_temperature|voltage)'
+            type: ['t']
+          - name: 'topic_stats.*.publish_async_(attempts|failures)'
+            type: ['g']
+          - name: 'topic_stats.*.last_async_pub_duration'
+            type: ['t']
+```
+
+`stats` contains a list of the metrics that should be aggregated. As observed, you can use regex to simplify these rules. The stats can be of type 'gauge' or 'timer'.
+
+- gauge: The result of aggregation will be just the last reported value. Denoted with type `'g'`.
+- timer: The result of aggregation will be the lower, upper, average and count of all values. Denoted with type `'t'`.
+
 
 ## Developer's References
 - - -
