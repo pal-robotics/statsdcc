@@ -41,7 +41,7 @@ To run aggregator
 - - -
 Example configuration files are in [statsdcc/etc](Logger)
 
-### Commmon Configuration Variables
+### Common Configuration Variables
 
 - 	`servers`: A list of server threads 
 
@@ -72,6 +72,15 @@ Example configuration files are in [statsdcc/etc](Logger)
 		"http": {
 			"port": 8000
 		}
+		```
+	
+	-	`ros`: This server subscribes to topics with message type `pal_statistics_msgs/Statistics`. For more information on how to publish such topics see the [PAL Statistics Framework
+](https://gitlab/qa/pal_statistics). The topics' configuration needs to be setup on the ROS parameter server. Check the [Proxy Configuration Variables](#proxy-configuration-variables) section.
+
+		```
+		"ros": {
+            "node_name": "statsdcc"
+        },
 		```
 			
 -	`workers`: Number of worker threads to compute aggregations. If not specified defaults to 1.
@@ -118,14 +127,14 @@ Example configuration files are in [statsdcc/etc](Logger)
 		]
 		```
 		
-		-	shard: Key for this node used while building HashRing for consistent hasing.
+		-	shard: Key for this node used while building HashRing for consistent hashing.
 				
 		-	host: Hostname for carbon instance. If not specified defaults to "127.0.0.1".
 				
-		-	port: Tcp port number on which the carbon instance is listeningfor metrics. If not specified defaults to 3000.
+		-	port: Tcp port number on which the carbon instance is listening for metrics. If not specified defaults to 3000.
 				
 		-	vnodes: The amount of virtual nodes per server. 
-					Used for consistent hasing. 
+					Used for consistent hashing. 
 					Larger number gives bigger distribution in the HashRing. 
 					If not specified defaults to 1000.
 					
@@ -145,7 +154,7 @@ Example configuration files are in [statsdcc/etc](Logger)
 
 ### Proxy Configuration Variables
 
--	`backends`:	List of backends to send metrics to, atleast one of the following backends should be set. 
+-	`backends`:	List of backends to send metrics to, at least one of the following backends should be set. 
 	
 	-	`stdout`: Set to true to dump aggregations to stdout.
 	
@@ -163,6 +172,32 @@ Example configuration files are in [statsdcc/etc](Logger)
 		}
 	]
 	```
+
+### ROS Server Topics' Configuration
+
+A `topics` parameter needs to be set under the `ros` server node namespace. `topics` must contain a list of topics names with a set of rules to indicate which stats should be aggregated.
+
+Here is an example extracted from the standard `pal_statsdcc_cfg` [topics configuration file](https://gitlab/qa/pal_statistics_cfg/-/blob/master/pal_statsdcc_cfg/config/topics.yaml). Check the rest of the package to get an idea on how the `statsdcc` is normally launched in the robot.
+
+```yaml
+topics:
+    - name: '/motors_statistics'
+      stats:
+          - name: 'motors.*.mode'
+            type: ['g']
+          - name: 'motors.*.(current|velocity|position|torque|abs_position|drive_temperature|motor_temperature|voltage)'
+            type: ['t']
+          - name: 'topic_stats.*.publish_async_(attempts|failures)'
+            type: ['g']
+          - name: 'topic_stats.*.last_async_pub_duration'
+            type: ['t']
+```
+
+`stats` contains a list of the metrics that should be aggregated. As observed, you can use regex to simplify these rules. The stats can be of type 'gauge' or 'timer'.
+
+- gauge: The result of aggregation will be just the last reported value. Denoted with type `'g'`.
+- timer: The result of aggregation will be the lower, upper, average and count of all values. Denoted with type `'t'`.
+
 
 ## Developer's References
 - - -
