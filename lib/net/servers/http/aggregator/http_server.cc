@@ -11,7 +11,7 @@
 
 #include <queue>
 #include <boost/algorithm/string.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 #include "statsdcc/net/wrapper.h"
 #include "statsdcc/version.h"
@@ -236,14 +236,14 @@ Json::Value HttpServer::get_app_status() {
     }
 
     std::sort(sorted_freq.begin(), sorted_freq.end(),
-              boost::bind(&std::pair<std::string, long long int>::second, _1) >
-              boost::bind(&std::pair<std::string, long long int>::second, _2));
+              boost::bind(&std::pair<std::string, long long int>::second, boost::placeholders::_1) >
+              boost::bind(&std::pair<std::string, long long int>::second, boost::placeholders::_2));
 
     int i = 0;
     for (auto itr = sorted_freq.cbegin();
          itr != sorted_freq.cend();
          ++itr) {
-      root[std::to_string(id)]["hot_metrics"][itr->first] = itr->second;
+      root[std::to_string(id)]["hot_metrics"][itr->first] = static_cast<Json::Value::UInt64>(itr->second);
       if (++i == 5) break;
     }
 

@@ -1,27 +1,29 @@
 <?xml version="1.0"?>
-<package format="2">
+<package format="3">
   <name>statsdcc</name>
   <version>0.0.13</version>
   <description>High performance multi-threaded network daemon written in C++
   that aggregates stats and sends aggregates to backends</description>
 
+  <author email="jordan.palacios@pal-robotics.com">Jordan Palacios</author>
   <maintainer email="jordan.palacios@pal-robotics.com">Jordan Palacios</maintainer>
 
   <license>MIT</license>
 
-  <author email="jordan.palacios@pal-robotics.com">Jordan Palacios</author>
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
-  <buildtool_depend>catkin</buildtool_depend>
-
-  <build_depend>boost</build_depend>
+  <build_depend>libboost-regex-dev</build_depend>
   <build_depend>gperftools</build_depend>
   <build_depend>libjsoncpp-dev</build_depend>
   <build_depend>libmicrohttpd</build_depend>
   <build_depend>libssl-dev</build_depend>
   <build_depend>pal_statistics_msgs</build_depend>
-  <build_depend>roscpp</build_depend>
+  <build_depend>rclcpp</build_depend>
 
-  <exec_depend>boost</exec_depend>
-  <exec_depend>roscpp</exec_depend>
+  <exec_depend>libboost-regex</exec_depend>
+  <exec_depend>rclcpp</exec_depend>
 
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
 </package>

@@ -6,18 +6,20 @@
 
 #include "statsdcc/net/servers/socket/ros_server.h"
 
-#include <sstream>
+#include <chrono>
 #include <regex>
+#include <set>
+#include <sstream>
 
-#include <boost/bind.hpp>
-
-#include <ros/assert.h>
+#include "rclcpp/executors/single_threaded_executor.hpp"
 
 #include "statsdcc/backend_container.h"
 #include "statsdcc/ledger.h"
 #include "statsdcc/logger.h"
 #include "statsdcc/net/wrapper.h"
 #include "statsdcc/os.h"
+
+using std::placeholders::_1;
 
 namespace statsdcc
 {
@@ -27,157 +29,179 @@ namespace servers
 {
 namespace socket
 {
-namespace
-{
-ROSServer::Rules to_rules(const XmlRpc::XmlRpcValue &stats)
-{
-  ROSServer::Rules rules;
-  ROS_ASSERT(stats.getType() == XmlRpc::XmlRpcValue::TypeArray);
-  for (int i = 0; i < stats.size(); ++i)
-  {
-    XmlRpc::XmlRpcValue stat = stats[i];
-    ROS_ASSERT(stat.getType() == XmlRpc::XmlRpcValue::TypeStruct);
-    if (stat.hasMember("name") && stat.hasMember("type"))
-    {
-      ROS_ASSERT(stat["name"].getType() == XmlRpc::XmlRpcValue::TypeString);
-      const std::string name = static_cast<std::string>(stat["name"]);
 
-      ROS_ASSERT(stat["type"].getType() == XmlRpc::XmlRpcValue::TypeArray);
-      ROSServer::MetricTypes metric_types;
-      for (int j = 0; j < stat["type"].size(); ++j)
-      {
-        ROS_ASSERT(stat["type"][j].getType() == XmlRpc::XmlRpcValue::TypeString);
-
-        const std::string metric_type = static_cast<std::string>(stat["type"][j]);
-        // converto to "c", "ms", "g" or "s"
-        if (metric_type == "c" || metric_type == "counter")
-        {
-          metric_types.push_back("c");
-        }
-        else if (metric_type == "g" || metric_type == "gauge")
-        {
-          metric_types.push_back("g");
-        }
-        else if (metric_type == "t" || metric_type == "timer")
-        {
-          metric_types.push_back("ms");
-        }
-        else if (metric_type == "s" || metric_type == "set")
-        {
-          metric_types.push_back("s");
-        }
-      }
-
-      rules.push_back(std::make_pair(name, metric_types));
-    }
-    else
-    {
-      ::logger->error("Stats list element invalid format");
-    }
-  }
-  return rules;
-}
-}
+const static auto node_options = rclcpp::NodeOptions()
+  .allow_undeclared_parameters(true)
+  .automatically_declare_parameters_from_overrides(true);
 
 ROSServer::ROSServer(std::string node_name, std::shared_ptr<consumers::Consumer> consumer,
                      const std::shared_ptr<BackendContainer> &backend_container)
   : Server(1, consumer)
-  , node_name_(node_name)
+  , rclcpp::Node(node_name, node_options)
+
   , backend_container_(backend_container)
-  , node_handle_("~")
+
+  , names_subs_()
+  , values_subs_()
   , topics_rules_()
   , topics_stats_names_()
   , topic_metrics_()
+  , topic_processing_metrics_()
+
   , ledger_(new Ledger())
   , flush_ledger_(false)
   , ledger_timer_()
   , flusher_guard_()
+
+  , spinner_thread_()
+  , executor_()
 {
   createStatsSubs();
 
-  auto ledge_flusher = [&](const ros::TimerEvent & /*event*/) { flush_ledger_ = true; };
+  auto ledge_flusher = [&]() { flush_ledger_ = true; };
 
-  ledger_timer_ = node_handle_.createTimer(ros::Duration(::config->frequency), ledge_flusher);
+  ledger_timer_ = this->create_wall_timer(std::chrono::seconds(::config->frequency), ledge_flusher);
+
+  spinner_thread_ = std::thread([&] {
+    executor_.add_node(this->get_node_base_interface());
+    executor_.spin();
+  });
+}
+
+ROSServer::~ROSServer()
+{
+  executor_.cancel();
+  spinner_thread_.join();
+}
+
+ROSServer::Rules ROSServer::to_rules(const std::string &topic_name)
+{
+  ROSServer::Rules rules;
+
+  const auto stat_names = "topics." + topic_name + ".stat_names";
+  const auto stat_types = "topics." + topic_name + ".stat_types";
+
+  if(!this->has_parameter(stat_names) || !this->has_parameter(stat_types))
+  {
+    const auto message = "No stats defined for " + topic_name;
+    ::logger->error(message);
+    throw std::runtime_error(message);
+  }
+
+  const auto stat_names_list = this->get_parameter(stat_names).as_string_array();
+  const auto stat_types_list = this->get_parameter(stat_types).as_string_array();
+
+  if(stat_names_list.size() != stat_types_list.size())
+  {
+    const auto message = "'stat_names' and 'stat_types' list have different sizes for topic " + topic_name;
+    ::logger->error(message);
+    throw std::runtime_error(message);
+  }
+
+  for (size_t i = 0; i < stat_names_list.size(); ++i)
+  {
+    const std::string name = stat_names_list[i];
+    const std::string type = stat_types_list[i];
+
+    // check type is valid
+    if (type != "c" && type != "g" && type != "t" && type != "s")
+    {
+      const auto message = "Invalid metric type '" + type + "' for stat '" + name + "'";
+      ::logger->error(message);
+      throw std::runtime_error(message);
+    }
+
+    // t -> ms conversion
+    if (type == "t")
+    {
+      rules.push_back(std::make_pair(name, MetricTypes{"ms"}));
+    }
+    else
+    {
+      rules.push_back(std::make_pair(name, MetricTypes{type}));
+    }
+  }
+
+  return rules;
 }
 
 void ROSServer::createStatsSubs()
 {
-  // retrieve statistics rules
-  if (node_handle_.hasParam("topics"))
+  // List parameters with the prefix "topics" with any depth
+  constexpr auto kAnyDepth = 0u;
+  const auto params = this->list_parameters({"topics"}, kAnyDepth);
+
+  const int init_position = std::string("topics.").size();
+
+  std::set<std::string> topics_names;
+  for (const auto & param : params.names) {
+    // Find the topic name after 'topics.' and before the next '.'
+    auto topic_name = param.substr(
+        init_position,
+        param.find_first_of('.', init_position) - init_position);
+
+    topics_names.insert(topic_name);
+  }
+
+  auto i = 0u;
+  for (const auto & topic_name : topics_names)
   {
-    ::logger->info("Retrieving topics list");
+    topics_rules_.push_back(to_rules(topic_name));
 
-    XmlRpc::XmlRpcValue topics, topic;
-    std::string topic_name;
+    ::logger->info("Creating subscribers for " + topic_name);
 
-    node_handle_.getParam("topics", topics);
-    ROS_ASSERT(topics.getType() == XmlRpc::XmlRpcValue::TypeArray);
+    auto names_qos = rclcpp::QoS(rclcpp::KeepLast(1000)).transient_local();
 
-    for (int i = 0; i < topics.size(); ++i)
-    {
-      topic = topics[i];
-      ROS_ASSERT(topic.getType() == XmlRpc::XmlRpcValue::TypeStruct);
+    auto names_callback =
+        [topic_name, i, this](const pal_statistics_msgs::msg::StatisticsNames::SharedPtr msg) {
+          namesCallback(msg, topic_name, i);
+        };
 
-      if (topic.hasMember("name") && topic.hasMember("stats"))
-      {
-        ROS_ASSERT(topic["name"].getType() == XmlRpc::XmlRpcValue::TypeString);
-        ROS_ASSERT(topic["stats"].getType() == XmlRpc::XmlRpcValue::TypeArray);
+    auto values_callback =
+        [topic_name, i, this](const pal_statistics_msgs::msg::StatisticsValues::SharedPtr msg) {
+          valuesCallback(msg, topic_name, i);
+        };
 
-        topic_name = static_cast<std::string>(topic["name"]);
+    auto name_subscription =  this->create_subscription<pal_statistics_msgs::msg::StatisticsNames>(
+        topic_name + "/names", names_qos, names_callback);
 
-        // convert XmlRpc stats in an more iterate friendly type
-        topics_rules_.push_back(to_rules(topic["stats"]));
+    auto value_subscription =  this->create_subscription<pal_statistics_msgs::msg::StatisticsValues>(
+        topic_name + "/values", 1000, values_callback);
 
-        ::logger->info("Creating subscribers for " + topic_name);
+    names_subs_.push_back(name_subscription);
+    values_subs_.push_back(value_subscription);
 
-        // skip '/' character from the topic names
-
-        /// @todo delete this
-        //        subs_.push_back(node_handle_.subscribe<pal_statistics_msgs::Statistics>(
-        //            topic_name, 1000,
-        //            boost::bind(&ROSServer::statisticsCallback, this, _1,
-        //            topic_name.substr(1), i)));
-
-
-
-        subs_.push_back(node_handle_.subscribe<pal_statistics_msgs::StatisticsNames>(
-            topic_name + "/names", 1000,
-            boost::bind(&ROSServer::namesCallback, this, _1, topic_name.substr(1), i)));
-
-        subs_.push_back(node_handle_.subscribe<pal_statistics_msgs::StatisticsValues>(
-            topic_name + "/values", 1000,
-            boost::bind(&ROSServer::valuesCallback, this, _1, topic_name.substr(1), i)));
-      }
-      else
-      {
-        ::logger->error("Topics list element invalid format");
-      }
-    }
+    ++i;
   }
 }
 
-void ROSServer::namesCallback(const pal_statistics_msgs::StatisticsNames::ConstPtr &names,
-                              const std::string &topic_name, int /*rules_index*/)
+void ROSServer::namesCallback(const pal_statistics_msgs::msg::StatisticsNames::SharedPtr msg,
+                              const std::string &topic_name, unsigned int /*rules_index*/)
 {
   ::logger->info("Statistics names from " + topic_name + " received");
-  topics_stats_names_[topic_name] = std::make_pair(names->names, names->names_version);
+  topics_stats_names_[topic_name] = std::make_pair(msg->names, msg->names_version);
   topic_metrics_[topic_name].clear();
 }
 
-void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::ConstPtr &values,
-                               const std::string &topic_name, int rules_index)
+void ROSServer::valuesCallback(const pal_statistics_msgs::msg::StatisticsValues::SharedPtr msg,
+                               const std::string &topic_name, unsigned int rules_index)
 {
   const auto &topic_stats_name = topics_stats_names_[topic_name];
   // discard if no names for this topic were received or versions differ
-  if (topic_stats_name.first.empty() ||
-      topic_stats_name.second != values->names_version)
+  if (topic_stats_name.first.empty())
+  {
+    ::logger->warn("Discarding values from " + topic_name + ", no names received yet");
+    return;
+  }
+
+  if (topic_stats_name.second != msg->names_version)
   {
     ::logger->warn("Discarding values from " + topic_name + ", names and values version "
                                                             "differ");
     return;
   }
 
-  ros::Time before = ros::Time::now();
+  auto before = std::chrono::system_clock::now();
 
   const Rules &rules = topics_rules_[rules_index];
   std::smatch result;
@@ -189,9 +213,9 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
   bool has_computed_metrics = !metrics_vector.empty();
   if (has_computed_metrics)
   {
-    for (size_t i = 0; i < values->values.size(); ++i)
+    for (size_t i = 0; i < msg->values.size(); ++i)
     {
-      const double &stat_value = values->values[i];
+      const double &stat_value = msg->values[i];
 
     for (auto metric = metrics_vector[i].begin(); metric != metrics_vector[i].end(); ++metric)
     {
@@ -201,11 +225,11 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
   }
   else
   {
-    metrics_vector.resize(values->values.size());
-    for (size_t i = 0; i < values->values.size(); ++i)
+    metrics_vector.resize(msg->values.size());
+    for (size_t i = 0; i < msg->values.size(); ++i)
     {
       const std::string &stat_name = topic_stats_name.first[i];
-      const double &stat_value = values->values[i];
+      const double &stat_value = msg->values[i];
 
       bool rule_found = false;
       for (auto rule = rules.begin(); rule != rules.end(); ++rule)
@@ -252,10 +276,10 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
     flush_ledger_ = false;
   }
 
-  ros::Time after = ros::Time::now();
+  auto after = std::chrono::system_clock::now();
 
   const std::string stat_name = "statsdcc." + topic_name + ".callback_processing_time";
-  const double stat_value = (after - before).toSec();
+  const auto stat_value = std::chrono::duration_cast<std::chrono::milliseconds>(after - before).count();
   auto it = topic_processing_metrics_.find(topic_name);
   if (it == topic_processing_metrics_.end())
   {
@@ -265,7 +289,6 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::StatisticsValues::Cons
   {
     ledger_->buffer(it->second, stat_value);
   }
-
 }
 
 }  // namespace socket

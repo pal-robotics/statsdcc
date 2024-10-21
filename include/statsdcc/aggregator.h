@@ -56,6 +56,8 @@ inline void options(const int argc, char* const argv[]) {
   static struct option long_options[] = {
     {"help",    no_argument, NULL, 'h'},
     {"version", no_argument, NULL, 'V'},
+    {"ros-args", no_argument, NULL, 'r'},
+    {"params-file", no_argument, NULL, 'p'},
     {NULL,      0, NULL, 0}
   };
 
@@ -70,6 +72,14 @@ inline void options(const int argc, char* const argv[]) {
 
       case 'V':
         version(argv[0]);
+        break;
+
+      case 'r':
+        // ros specific arg, skip
+        break;
+
+      case 'p':
+        // ros specific arg, skip
         break;
 
       default:

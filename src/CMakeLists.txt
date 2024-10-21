@@ -6,7 +6,7 @@ add_library (aggregator_worker workers/aggregator/worker.cc)
 add_library (proxy_worker workers/proxy/worker.cc)
 add_library (ledger ledger.cc)
 
-add_executable (statsdcc aggregator.cc)
+ament_auto_add_executable (statsdcc aggregator.cc)
 
 # link libraries
 target_link_libraries (statsdcc
@@ -31,7 +31,6 @@ target_link_libraries (statsdcc
   ${Boost_LIBRARIES}
   ${TCMALLOC_MINIMAL}
   ${MICROHTTPD}
-  ${catkin_LIBRARIES}
   pthread
 )
 
@@ -64,7 +63,5 @@ install(
     TARGETS
         config backend_config proxy_config aggregator_worker
         proxy_worker ledger statsdcc proxy
-    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+    RUNTIME DESTINATION lib/${PROJECT_NAME}
 )

@@ -35,7 +35,7 @@ class HttpServer {
                                     port,
                                     NULL,
                                     NULL,
-                                    &HttpServer::handle_request,
+                                    (MHD_AccessHandlerCallback)&HttpServer::handle_request,
                                     NULL,
                                     MHD_OPTION_END);
     if (this->server == NULL) throw std::string("Failed to start HTTP server");

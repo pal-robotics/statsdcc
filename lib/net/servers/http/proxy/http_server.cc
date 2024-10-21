@@ -12,7 +12,7 @@
 #include <queue>
 #include <string>
 #include <boost/algorithm/string.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 #include "statsdcc/net/wrapper.h"
 #include "statsdcc/version.h"
@@ -208,9 +208,9 @@ Json::Value HttpServer::get_app_status() {
 
   // workers app stats
   root["worker"]["metrics_dropped"] =
-    static_cast<unsigned long long int>(::worker->metrics_dropped);
+    static_cast<Json::Value::UInt64>(::worker->metrics_dropped);
   root["worker"]["bad_lines_seen"] =
-    static_cast<unsigned long long int>(::worker->bad_lines_seen);
+    static_cast<Json::Value::UInt64>(::worker->bad_lines_seen);
 
   return root;
 }

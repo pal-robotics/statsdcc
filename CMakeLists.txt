@@ -1,17 +1,13 @@
-cmake_minimum_required (VERSION 2.8.12)
+cmake_minimum_required (VERSION 3.8)
 
 project (statsdcc CXX)
 
 set(DISABLE_PAL_FLAGS TRUE)
-find_package(catkin REQUIRED
-    COMPONENTS
-        pal_statistics_msgs
-        roscpp
-)
 
+find_package(ament_cmake_auto REQUIRED)
 find_package(Boost REQUIRED regex)
 
-catkin_package()
+ament_auto_find_build_dependencies()
 
 include(CheckIncludeFileCXX)
 include (CheckCXXCompilerFlag)
@@ -21,54 +17,30 @@ set (PROJECT_VERSION_MINOR 14)
 set (PROJECT_VERSION_PATCH 0)
 set (PROJECT_VERSION
     "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
-execute_process (
-  COMMAND git log -1 --format=%h
-  OUTPUT_VARIABLE BUILD
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
+# execute_process (
+#   COMMAND git log -1 --format=%h
+#   OUTPUT_VARIABLE BUILD
+#   OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 if (NOT debug)
   set (debug "false")
 endif()
 
-
 configure_file (include/statsdcc/version.h.in
-                ${CATKIN_DEVEL_PREFIX}/include/statsdcc/version.h)
-
-# set compiler flags
-check_cxx_compiler_flag ('-std=c++11' COMPILER_SUPPORTS_CXX11)
-check_cxx_compiler_flag ('-std=c++0x' COMPILER_SUPPORTS_CXX0X)
-
-if(COMPILER_SUPPORTS_CXX11)
-  add_compile_options (-std=c++11)
-  set (CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++11")
-elseif(COMPILER_SUPPORTS_CXX0X)
-  add_compile_options (-std=c++0x)
-  set (CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -std=c++0x")
-else()
-  message(STATUS
-    "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler."
-  )
-endif()
-
-add_compile_options (-Wall -Wextra)
+                ${PACKAGE_XML_DIRECTORY}/include/statsdcc/version.h)
 
 add_definitions (-D_GLIBCXX_USE_NANOSLEEP)
 add_definitions (-D_GLIBCXX_USE_SCHED_YIELD)
 
-#if (debug)
-#  add_compile_options(-g)
-#else(debug)
-#  add_compile_options(-O3)
-#endif()
+add_compile_options (-Wno-deprecated-declarations)
 
 include_directories (
    include
    ${Boost_INCLUDE_DIRS}
-   ${CATKIN_DEVEL_PREFIX}/include
    build/include
    # vendor/gtest-1.7.0/include
 )
-include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
+include_directories(SYSTEM)
 
 # check if atomic.h exists
 check_include_file_cxx (atomic HAVE_ATOMIC)
@@ -113,17 +85,19 @@ endif()
 add_subdirectory (lib)
 add_subdirectory (src)
 
-if(CATKIN_ENABLE_TESTING)
-  # enable_testing()
+# if(CATKIN_ENABLE_TESTING)
+#   # enable_testing()
 
-  add_subdirectory (test)
-  # using version packaged with catkin
-  # add_subdirectory (vendor/gtest-1.7.0)
+#   add_subdirectory (test)
+#   # using version packaged with catkin
+#   # add_subdirectory (vendor/gtest-1.7.0)
 
-  # add_test (ledger_test test/ledger_test)
+#   # add_test (ledger_test test/ledger_test)
 
-  if (RUN_NODE_HASHRING_TESTS)
-    add_test (hashring_test test/hashring_test)
-  endif()
+#   if (RUN_NODE_HASHRING_TESTS)
+#     add_test (hashring_test test/hashring_test)
+#   endif()
 
-endif()
+# endif()
+
+ament_auto_package()
