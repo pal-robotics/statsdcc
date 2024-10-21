@@ -2,6 +2,28 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'feat/ros2_port' into 'alum-devel'
+  Porting statsdcc package to ROS2
+  See merge request third-party/statsdcc!15
+* Don't execute git command
+* Using correct boost bind header
+* Disabling deprecated-declarations warning
+* Porting statsdcc package to ROS2
+  - Tests have been disabled
+  - Uses now ament_cmake_auto. Only required nodes are installed
+  - Format of topic yamls has been changed
+  - The ros_server is now also a Node
+  - rclcpp::init() is now done at the very beginning and some args had to
+  be added to the statsdcc options configuration
+* Merge branch 'ros_topics_doc' into 'erbium-devel'
+  ROS topics doc
+  See merge request third-party/statsdcc!13
+* Fixed misc typos
+* Added ROS server and topics configuration documentation
+* Contributors: Jordan Palacios
+
 0.0.13 (2021-07-23)
 -------------------
 * Merge branch 'boost_regex' into 'erbium-devel'
