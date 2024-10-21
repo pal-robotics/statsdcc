@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.0 (2024-10-21)
+------------------
 * Merge branch 'feat/ros2_port' into 'alum-devel'
   Porting statsdcc package to ROS2
   See merge request third-party/statsdcc!15
