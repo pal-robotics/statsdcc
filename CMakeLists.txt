@@ -32,6 +32,8 @@ configure_file (include/statsdcc/version.h.in
 add_definitions (-D_GLIBCXX_USE_NANOSLEEP)
 add_definitions (-D_GLIBCXX_USE_SCHED_YIELD)
 
+add_compile_options (-Wno-deprecated-declarations)
+
 include_directories (
    include
    ${Boost_INCLUDE_DIRS}
