@@ -2,21 +2,23 @@
 #ifndef INCLUDE_STATSDCC_NET_SERVERS_SOCKET_ROS_SERVER_H_
 #define INCLUDE_STATSDCC_NET_SERVERS_SOCKET_ROS_SERVER_H_
 
+#include <map>
 #include <memory>
 #include <string>
-#include <vector>
-#include <map>
+#include <thread>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include <boost/ptr_container/ptr_vector.hpp>
 
-#include <ros/node_handle.h>
-#include <ros/subscriber.h>
-#include <ros/timer.h>
+#include "pal_statistics_msgs/msg/statistics_names.hpp"
+#include "pal_statistics_msgs/msg/statistics_values.hpp"
 
-#include <pal_statistics_msgs/StatisticsNames.h>
-#include <pal_statistics_msgs/StatisticsValues.h>
+#include "rclcpp/executors/single_threaded_executor.hpp"
+#include "rclcpp/node.hpp"
+#include "rclcpp/subscription.hpp"
+#include "rclcpp/timer.hpp"
 
 #include "statsdcc/net/servers/socket/server.h"
 #include "statsdcc/net/wrapper.h"
@@ -33,7 +35,7 @@ namespace servers
 {
 namespace socket
 {
-class ROSServer : public Server
+class ROSServer : public Server, public rclcpp::Node
 {
 public:
   typedef std::vector<std::string> MetricTypes;
@@ -65,7 +67,7 @@ public:
   ROSServer(ROSServer&&) = delete;
   ROSServer& operator=(ROSServer&&) = delete;
 
-  ~ROSServer() = default;
+  ~ROSServer();
 
   /**
    * Starts the treads to process in comming data by calling consumer object
@@ -73,20 +75,21 @@ public:
   void start();
 
 private:
+  ROSServer::Rules to_rules(const std::string & topic_name);
+
   void createStatsSubs();
 
-  void namesCallback(const pal_statistics_msgs::StatisticsNames::ConstPtr& names,
-                     const std::string& topic_name, int rules_index);
-  void valuesCallback(const pal_statistics_msgs::StatisticsValues::ConstPtr& values,
-                      const std::string& topic_name, int rules_index);
+  void namesCallback(const pal_statistics_msgs::msg::StatisticsNames::SharedPtr msg,
+                     const std::string& topic_name, unsigned int rules_index);
+  void valuesCallback(const pal_statistics_msgs::msg::StatisticsValues::SharedPtr msg,
+                      const std::string& topic_name, unsigned int rules_index);
 
 private:
-  std::string node_name_;
-
   std::shared_ptr<BackendContainer> backend_container_;
 
-  ros::NodeHandle node_handle_;
-  std::vector<ros::Subscriber> subs_;
+  std::vector<rclcpp::Subscription<pal_statistics_msgs::msg::StatisticsNames>::SharedPtr> names_subs_;
+  std::vector<rclcpp::Subscription<pal_statistics_msgs::msg::StatisticsValues>::SharedPtr> values_subs_;
+
   std::vector<Rules> topics_rules_;
   TopicsStatsNames topics_stats_names_;
   TopicMetrics topic_metrics_;
@@ -94,8 +97,11 @@ private:
 
   std::unique_ptr<Ledger> ledger_;
   bool flush_ledger_;
-  ros::Timer ledger_timer_;
+  rclcpp::TimerBase::SharedPtr ledger_timer_;
   std::unique_ptr<ThreadGuard> flusher_guard_;
+
+  std::thread spinner_thread_;
+  rclcpp::executors::SingleThreadedExecutor executor_;
 };
 
 }  // namespace socket

@@ -243,7 +243,7 @@ Json::Value HttpServer::get_app_status() {
     for (auto itr = sorted_freq.cbegin();
          itr != sorted_freq.cend();
          ++itr) {
-      root[std::to_string(id)]["hot_metrics"][itr->first] = itr->second;
+      root[std::to_string(id)]["hot_metrics"][itr->first] = static_cast<Json::Value::UInt64>(itr->second);
       if (++i == 5) break;
     }
 

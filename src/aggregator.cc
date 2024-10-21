@@ -5,11 +5,13 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <chrono>
 #include <csignal>
 #include <cstdint>
 #include <cstdio>
+#include <thread>
 
-#include <ros/init.h>
+#include "rclcpp/utilities.hpp"
 
 #include "statsdcc/backend_container.h"
 #include "statsdcc/server_factory.h"
@@ -21,6 +23,8 @@
 int main(int argc, char **argv) {
   std::signal(SIGINT, sig_handler);
   std::signal(SIGTERM, sig_handler);
+
+  rclcpp::init(argc, argv);
 
   if (argc == 1) usage(argv[0]);
   options(argc, argv);
@@ -62,13 +66,6 @@ int main(int argc, char **argv) {
 
   ::logger->info("Starting server...");
   ::consumer = std::make_shared<consumers::AggregatorConsumer>();
-
-  // ros init
-  if (::config->servers.ros.enabled)
-  {
-    ::logger->info("ros::init()");
-    ros::init(argc, argv, ::config->servers.ros.node_name);
-  }
 
   try {
     // start udp servers
@@ -117,7 +114,9 @@ int main(int argc, char **argv) {
   }
   else
   {
-    ros::spin();
+    while(rclcpp::ok()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    }
     stop();
   }
   return 0;
