@@ -12,7 +12,7 @@
 #include <queue>
 #include <string>
 #include <boost/algorithm/string.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 #include "statsdcc/net/wrapper.h"
 #include "statsdcc/version.h"
