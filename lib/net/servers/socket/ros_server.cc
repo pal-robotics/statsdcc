@@ -240,7 +240,7 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::msg::StatisticsValues:
         {
           if (rule->second.empty())
           {
-            RCLCPP_WARN(this->get_logger(),
+            RCLCPP_INFO(this->get_logger(),
               "%s has no metric types defined. Stats won't be logged", stat_name.c_str());
           }
 
@@ -260,7 +260,7 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::msg::StatisticsValues:
       // time
       if (!rule_found)
       {
-        RCLCPP_WARN(this->get_logger(),
+        RCLCPP_INFO(this->get_logger(),
           "%s is not matched by any rule. Stat won't be logged", stat_name.c_str());
       }
     }
