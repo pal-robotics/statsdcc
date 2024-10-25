@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.1.0 (2024-10-25)
+------------------
 * Merge branch 'fix/logging' into 'alum-devel'
   Use node logger to log messages
   See merge request third-party/statsdcc!16
