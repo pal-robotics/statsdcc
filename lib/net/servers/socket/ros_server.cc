@@ -12,6 +12,7 @@
 #include <sstream>
 
 #include "rclcpp/executors/single_threaded_executor.hpp"
+#include "rclcpp/logging.hpp"
 
 #include "statsdcc/backend_container.h"
 #include "statsdcc/ledger.h"
@@ -84,7 +85,7 @@ ROSServer::Rules ROSServer::to_rules(const std::string &topic_name)
   if(!this->has_parameter(stat_names) || !this->has_parameter(stat_types))
   {
     const auto message = "No stats defined for " + topic_name;
-    ::logger->error(message);
+    RCLCPP_ERROR(this->get_logger(), message.c_str());
     throw std::runtime_error(message);
   }
 
@@ -94,7 +95,7 @@ ROSServer::Rules ROSServer::to_rules(const std::string &topic_name)
   if(stat_names_list.size() != stat_types_list.size())
   {
     const auto message = "'stat_names' and 'stat_types' list have different sizes for topic " + topic_name;
-    ::logger->error(message);
+    RCLCPP_ERROR(this->get_logger(), message.c_str());
     throw std::runtime_error(message);
   }
 
@@ -107,7 +108,7 @@ ROSServer::Rules ROSServer::to_rules(const std::string &topic_name)
     if (type != "c" && type != "g" && type != "t" && type != "s")
     {
       const auto message = "Invalid metric type '" + type + "' for stat '" + name + "'";
-      ::logger->error(message);
+      RCLCPP_ERROR(this->get_logger(), message.c_str());
       throw std::runtime_error(message);
     }
 
@@ -148,7 +149,7 @@ void ROSServer::createStatsSubs()
   {
     topics_rules_.push_back(to_rules(topic_name));
 
-    ::logger->info("Creating subscribers for " + topic_name);
+    RCLCPP_INFO(this->get_logger(), "Creating subscribers for %s", topic_name.c_str());
 
     auto names_qos = rclcpp::QoS(rclcpp::KeepLast(1000)).transient_local();
 
@@ -178,7 +179,7 @@ void ROSServer::createStatsSubs()
 void ROSServer::namesCallback(const pal_statistics_msgs::msg::StatisticsNames::SharedPtr msg,
                               const std::string &topic_name, unsigned int /*rules_index*/)
 {
-  ::logger->info("Statistics names from " + topic_name + " received");
+  RCLCPP_INFO(this->get_logger(), "Statistics names from %s received", topic_name.c_str());
   topics_stats_names_[topic_name] = std::make_pair(msg->names, msg->names_version);
   topic_metrics_[topic_name].clear();
 }
@@ -190,14 +191,15 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::msg::StatisticsValues:
   // discard if no names for this topic were received or versions differ
   if (topic_stats_name.first.empty())
   {
-    ::logger->warn("Discarding values from " + topic_name + ", no names received yet");
+    RCLCPP_WARN(this->get_logger(),
+      "Discarding values from %s, no names received yet", topic_name.c_str());
     return;
   }
 
   if (topic_stats_name.second != msg->names_version)
   {
-    ::logger->warn("Discarding values from " + topic_name + ", names and values version "
-                                                            "differ");
+    RCLCPP_WARN(this->get_logger(),
+      "Discarding values from %s, names and values version differ", topic_name.c_str());
     return;
   }
 
@@ -238,8 +240,8 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::msg::StatisticsValues:
         {
           if (rule->second.empty())
           {
-            ::logger->warn(stat_name + " has no metric types defined. Stats won't be "
-                                       "logged");
+            RCLCPP_INFO(this->get_logger(),
+              "%s has no metric types defined. Stats won't be logged", stat_name.c_str());
           }
 
           for (auto metric_type = rule->second.begin(); metric_type != rule->second.end();
@@ -258,7 +260,8 @@ void ROSServer::valuesCallback(const pal_statistics_msgs::msg::StatisticsValues:
       // time
       if (!rule_found)
       {
-        ::logger->warn(stat_name + " is not matched by any rule. Stat won't be logged");
+        RCLCPP_INFO(this->get_logger(),
+          "%s is not matched by any rule. Stat won't be logged", stat_name.c_str());
       }
     }
   }
