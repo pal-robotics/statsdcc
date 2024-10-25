@@ -2,6 +2,15 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'fix/logging' into 'alum-devel'
+  Use node logger to log messages
+  See merge request third-party/statsdcc!16
+* Use INFO level instead of WARN for not logged stats
+* Use node logger to log messages
+* Contributors: Jordan Palacios, Noel Jimenez
+
 1.0.0 (2024-10-21)
 ------------------
 * Merge branch 'feat/ros2_port' into 'alum-devel'
