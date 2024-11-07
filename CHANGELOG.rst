@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.2.0 (2024-11-07)
+------------------
 * Merge branch 'feat/backward_ros' into 'alum-devel'
   Add backward_ros dependency
   See merge request third-party/statsdcc!17
