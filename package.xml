@@ -12,6 +12,8 @@
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
+  <depend>backward_ros</depend>
+
   <build_depend>libboost-regex-dev</build_depend>
   <build_depend>gperftools</build_depend>
   <build_depend>libjsoncpp-dev</build_depend>
