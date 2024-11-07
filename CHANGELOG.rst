@@ -2,6 +2,14 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'feat/backward_ros' into 'alum-devel'
+  Add backward_ros dependency
+  See merge request third-party/statsdcc!17
+* Add backward_ros dependency
+* Contributors: Jordan Palacios, Noel Jimenez
+
 1.1.0 (2024-10-25)
 ------------------
 * Merge branch 'fix/logging' into 'alum-devel'
