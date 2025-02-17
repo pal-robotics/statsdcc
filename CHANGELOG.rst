@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.2.1 (2025-02-17)
+------------------
 * Adapting to the changes of the statistics topic QoS
 * Contributors: Jordan Palacios
 
