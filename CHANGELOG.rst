@@ -2,6 +2,11 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Adapting to the changes of the statistics topic QoS
+* Contributors: Jordan Palacios
+
 1.2.0 (2024-11-07)
 ------------------
 * Merge branch 'feat/backward_ros' into 'alum-devel'
