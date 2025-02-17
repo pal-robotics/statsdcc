@@ -31,6 +31,9 @@ namespace servers
 namespace socket
 {
 
+static const auto kNamesQoS = rclcpp::QoS(rclcpp::KeepLast(1)).transient_local();
+static const auto KValuesQoS = rclcpp::QoS(rclcpp::KeepLast(1000)).best_effort();
+
 const static auto node_options = rclcpp::NodeOptions()
   .allow_undeclared_parameters(true)
   .automatically_declare_parameters_from_overrides(true);
@@ -151,8 +154,6 @@ void ROSServer::createStatsSubs()
 
     RCLCPP_INFO(this->get_logger(), "Creating subscribers for %s", topic_name.c_str());
 
-    auto names_qos = rclcpp::QoS(rclcpp::KeepLast(1000)).transient_local();
-
     auto names_callback =
         [topic_name, i, this](const pal_statistics_msgs::msg::StatisticsNames::SharedPtr msg) {
           namesCallback(msg, topic_name, i);
@@ -164,10 +165,10 @@ void ROSServer::createStatsSubs()
         };
 
     auto name_subscription =  this->create_subscription<pal_statistics_msgs::msg::StatisticsNames>(
-        topic_name + "/names", names_qos, names_callback);
+        topic_name + "/names", kNamesQoS, names_callback);
 
     auto value_subscription =  this->create_subscription<pal_statistics_msgs::msg::StatisticsValues>(
-        topic_name + "/values", 1000, values_callback);
+        topic_name + "/values", KValuesQoS, values_callback);
 
     names_subs_.push_back(name_subscription);
     values_subs_.push_back(value_subscription);
