@@ -32,7 +32,7 @@ namespace socket
 {
 
 static const auto kNamesQoS = rclcpp::QoS(rclcpp::KeepLast(1)).transient_local();
-static const auto KValuesQoS = rclcpp::QoS(rclcpp::KeepLast(1000)).best_effort();
+static const auto KValuesQoS = rclcpp::QoS(rclcpp::KeepLast(10)).best_effort();
 
 const static auto node_options = rclcpp::NodeOptions()
   .allow_undeclared_parameters(true)
