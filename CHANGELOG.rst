@@ -2,8 +2,8 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.3.0 (2025-10-03)
+------------------
 * Fixed ament_auto warning about headers install destination
 * Contributors: Jordan Palacios
 
