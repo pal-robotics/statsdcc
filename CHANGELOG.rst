@@ -2,6 +2,11 @@
 Changelog for package statsdcc
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Reduce amount of samples of kept last values
+* Contributors: Jordan Palacios
+
 1.2.1 (2025-02-17)
 ------------------
 * Adapting to the changes of the statistics topic QoS
